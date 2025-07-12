@@ -147,6 +147,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
           <li>• Drag and drop multiple files simultaneously</li>
           <li>• Automatic duplicate detection across all files</li>
           <li>• Support for bank statements, credit cards, and previous exports</li>
+          <li>• <strong>Enhanced support for Orico KAL_...csv files</strong></li>
         </ul>
       </div>
     </div>
