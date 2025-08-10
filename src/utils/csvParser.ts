@@ -6,7 +6,9 @@ import { format, parse, isValid } from "date-fns";
 let idCounter = 0;
 const generateUniqueId = (prefix: string): string => {
   idCounter = (idCounter + 1) % 100000;
-  return `${prefix}_${Date.now()}_${idCounter}_${Math.floor(Math.random() * 1000)}`;
+  return `${prefix}_${Date.now()}_${idCounter}_${Math.floor(
+    Math.random() * 1000
+  )}`;
 };
 
 // Helper functions
@@ -103,8 +105,8 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
     const description = merchantStr || "PayPay Transaction";
     const category = categorizeOricoTransaction(merchantStr, shopName);
     const transaction: Transaction = {
-      id: generateUniqueId('paypay'),
-      date: parsedDate ? format(parsedDate, "yyyy-MM-dd") : "",
+      id: generateUniqueId("paypay"),
+      date: format(parsedDate, "yyyy-MM-dd"),
       time: "12:00:00",
       amount: Math.abs(amount),
       description,
@@ -154,7 +156,7 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
     const category = categorizeOricoTransaction(merchantStr, shopName);
     const transaction: Transaction = {
       id: generateUniqueId(`orico_${transactionIndex}`),
-      date: parsedDate ? format(parsedDate, "yyyy-MM-dd") : "",
+      date: format(parsedDate, "yyyy-MM-dd"),
       time: "12:00:00",
       amount: Math.abs(amount),
       description,
