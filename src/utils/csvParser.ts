@@ -11,6 +11,21 @@ const generateUniqueId = (prefix: string): string => {
   )}`;
 };
 
+// Global set to track known account numbers from filenames
+const knownAccountNumbers = new Set<string>();
+
+// Helper function to extract and store account number from filename
+const extractAndStoreAccountNumber = (filename: string): string | undefined => {
+  // Extract account number from UFJ filename pattern (e.g., 4614196_20250810131859.csv -> 4614196)
+  const match = filename.match(/^(\d{7})_\d+\.csv$/i);
+  if (match) {
+    const accountNumber = match[1];
+    knownAccountNumbers.add(accountNumber);
+    return accountNumber;
+  }
+  return undefined;
+};
+
 // Helper functions
 const parseDate = (dateString: string): Date | null => {
   if (!dateString) return null;
@@ -235,14 +250,37 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
 const isUFJInternalTransfer = (category: string, description: string): boolean => {
   const combined = ((category || '') + ' ' + (description || '')).toLowerCase();
   
-  // Check for transfers to/from your own accounts (your name: オガワ マサヒロ)
-  if (combined.includes('オガワ') && combined.includes('マサヒロ')) {
+  // Check for transfers between known account numbers (but not business transactions)
+  const hasAccountNumberMatch = Array.from(knownAccountNumbers).some(accNum => combined.includes(accNum));
+  if (hasAccountNumberMatch && combined.includes('振込') && !combined.includes('手数料')) {
     return true;
   }
   
-  // Check for transfers between known account numbers
-  if (combined.includes('3022252') || combined.includes('4614196')) {
-    return true;
+  // Check for simple internal transfers (but exclude legitimate business transactions)
+  if (combined.includes('振込') && !combined.includes('手数料')) {
+    // Exclude legitimate business/investment transactions
+    if (combined.includes('ラクテン') || combined.includes('rakuten') ||
+        combined.includes('証券') || combined.includes('投資') ||
+        combined.includes('保険') || combined.includes('生命') ||
+        combined.includes('損保') || combined.includes('insurance') ||
+        combined.includes('給与') || combined.includes('salary') ||
+        combined.includes('会社') || combined.includes('株式会社') ||
+        combined.includes('（カ') || combined.includes('（株') ||
+        combined.includes('ワイズ') || combined.includes('ペイメン') ||
+        combined.includes('センシン') || combined.includes('robo')) {
+      return false; // Not an internal transfer - legitimate business transaction
+    }
+    
+    // If it's a simple transfer with no clear business context, likely internal
+    // This catches personal transfers without hardcoding names
+    const hasBusinessIndicators = combined.includes('株') || combined.includes('会社') || 
+                                 combined.includes('（カ') || combined.includes('（有') ||
+                                 combined.includes('法人') || combined.includes('Co') ||
+                                 combined.includes('Ltd') || combined.includes('Inc');
+    
+    if (!hasBusinessIndicators && combined.length < 50) {
+      return true; // Likely internal transfer
+    }
   }
   
   return false;
@@ -256,8 +294,8 @@ const isUFJTransferFee = (category: string, description: string): boolean => {
 
 // UFJ CSV parser - handles quoted CSV with thousand separators
 export const parseUFJCSVFile = (data: any[][], filename?: string): Transaction[] => {
-  // Extract account number from filename (e.g., 4614196_20250810131859.csv -> 4614196)
-  const accountNumber = filename ? filename.split('_')[0].replace('.csv', '') : '';
+  // Extract and store account number from filename
+  const accountNumber = filename ? extractAndStoreAccountNumber(filename) || filename.split('_')[0].replace('.csv', '') : '';
   const transactions: Transaction[] = [];
   
   // Skip header row and process data
@@ -419,9 +457,28 @@ const isSMBCInternalTransfer = (description: string): boolean => {
   if (!description) return false;
   const desc = description.toLowerCase();
   
-  // Check for transfers to/from your name
-  if (desc.includes('オガワ') && desc.includes('マサヒロ')) {
+  // Check for transfers between known account numbers
+  const hasAccountNumberMatch = Array.from(knownAccountNumbers).some(accNum => desc.includes(accNum));
+  if (hasAccountNumberMatch) {
     return true;
+  }
+  
+  // Check for simple personal transfers (but exclude business transactions)
+  if (desc.includes('振込') && !desc.includes('手数料')) {
+    // Exclude legitimate business/investment transactions
+    if (desc.includes('会社') || desc.includes('株式会社') ||
+        desc.includes('（カ') || desc.includes('（株') ||
+        desc.includes('証券') || desc.includes('投資') ||
+        desc.includes('保険') || desc.includes('給与') ||
+        desc.includes('ワイズ') || desc.includes('ペイメン') ||
+        desc.includes('センシン') || desc.includes('robo')) {
+      return false; // Not an internal transfer - legitimate business transaction
+    }
+    
+    // Simple personal transfers are usually short descriptions
+    if (desc.length < 30 && !desc.includes('会社') && !desc.includes('株')) {
+      return true; // Likely internal transfer
+    }
   }
   
   return false;
@@ -482,7 +539,9 @@ const categorizeSMBCTransaction = (description: string): string => {
   }
   
   // Insurance
-  if (desc.includes('保険') || desc.includes('ソンガイホケン')) {
+  if (desc.includes('保険') || desc.includes('ソンガイホケン') || 
+      desc.includes('ソンガイ') || desc.includes('生命') ||
+      desc.includes('損保') || desc.includes('insurance')) {
     return 'Insurance';
   }
   
@@ -504,14 +563,23 @@ const isJREInternalTransfer = (description: string): boolean => {
   if (!description) return false;
   const desc = description.toLowerCase();
   
-  // Check for transfers to/from UFJ Bank with your name
-  if ((desc.includes('三菱ufj銀行') || desc.includes('三菱ｕｆｊ銀行')) && 
-      desc.includes('オカ゛ワ') && desc.includes('マサヒロ')) {
+  // Check for transfers between known account numbers
+  const hasAccountNumberMatch = Array.from(knownAccountNumbers).some(accNum => desc.includes(accNum));
+  if (hasAccountNumberMatch) {
     return true;
   }
   
-  // Check for transfers between known account numbers
-  if (desc.includes('3022252') || desc.includes('4614196')) {
+  // Check for simple bank transfers (but exclude business transactions)
+  if (desc.includes('三菱ufj銀行') || desc.includes('三菱ｕｆｊ銀行')) {
+    // Exclude legitimate business transactions
+    if (desc.includes('会社') || desc.includes('株式会社') ||
+        desc.includes('（カ') || desc.includes('（株') ||
+        desc.includes('証券') || desc.includes('投資') ||
+        desc.includes('保険') || desc.includes('給与')) {
+      return false; // Not an internal transfer - legitimate business transaction
+    }
+    
+    // Simple personal transfers to UFJ are usually internal
     return true;
   }
   
@@ -668,6 +736,12 @@ const categorizeUFJTransaction = (category: string, description: string): string
     return 'Investment Income';
   }
   
+  if (combined.includes('ラクテン') || combined.includes('rakuten') || 
+      combined.includes('証券') || combined.includes('投資') ||
+      combined.includes('株式') || combined.includes('fund')) {
+    return 'Investment';
+  }
+  
   // Living expenses
   if (combined.includes('家賃') || combined.includes('賃貸') ||
       combined.includes('管理費') || combined.includes('共益費')) {
@@ -817,6 +891,9 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
           skipEmptyLines: true,
           complete: (results) => {
             try {
+              // Extract account number from filename if it's a UFJ file
+              extractAndStoreAccountNumber(file.name);
+              
               const fileType = detectFileType(file.name, results.data as any[][]);
               let transactions: Transaction[] = [];
               

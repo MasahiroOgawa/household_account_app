@@ -50,7 +50,7 @@ Add unit tests and integration tests for all the functions.
 - Multiple date formats including Japanese dates
 - Various currency representations
 - Transaction categorization based on merchant patterns
-- Internal transfer filtering: Ignores bank-to-bank transfers between your own accounts, but keeps transaction fees
+- Internal transfer filtering: Ignores bank-to-bank transfers between your own accounts, but keeps transaction fees and legitimate business transactions (securities, insurance, etc.)
 
 **State Management**: Simple React state with localStorage for persistence. No Redux or complex state management needed due to straightforward data flow.
 
