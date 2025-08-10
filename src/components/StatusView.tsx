@@ -25,7 +25,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     }, {} as Record<string, number>);
 
   const topIncomeCategories = Object.entries(incomeCategories)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 6);
 
   // Expense category breakdown
@@ -37,18 +37,18 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     }, {} as Record<string, number>);
 
   const topExpenseCategories = Object.entries(expenseCategories)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 6);
 
-  // Monthly breakdown for the last 6 months
+  // Monthly breakdown for the previous 12 months
   const now = new Date();
-  const sixMonthsAgo = subMonths(now, 5);
-  const months = eachMonthOfInterval({ start: sixMonthsAgo, end: now });
+  const twelveMonthsAgo = subMonths(now, 11);
+  const months = eachMonthOfInterval({ start: twelveMonthsAgo, end: now });
 
   const monthlyData = months.map(month => {
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
-    
+
     const monthTransactions = transactions.filter(t => {
       const transactionDate = parseISO(t.date);
       return transactionDate >= monthStart && transactionDate <= monthEnd;
@@ -57,7 +57,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     const income = monthTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
-    
+
     const expenses = monthTransactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
@@ -75,7 +75,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Financial Analytics Dashboard</h2>
         <p className="text-gray-600 mb-8">Visual insights into your income and expense patterns</p>
-        
+
         {/* Show message if no data */}
         {transactions.length === 0 && (
           <div className="text-center py-12">
@@ -93,31 +93,31 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
             {/* Calculate max amount for scaling */}
             {(() => {
               const maxMonthlyAmount = Math.max(...monthlyData.map(d => Math.max(d.income, d.expenses)), 100);
-              
+
               return (
                 <>
                   {/* First Row: Pie Charts */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                  <div className="flex flex-row gap-8 mb-8 items-center justify-center">
                     {/* Graph 1: Income Category Breakdown */}
-                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
-                      <div className="mb-6">
-                        <h3 className="text-xl font-semibold text-gray-900 flex items-center mb-2">
-                          <PieChart className="w-6 h-6 mr-3 text-green-600" />
+                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 flex flex-col items-center justify-center" style={{ width: '25%' }}>
+                      <div className="mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-1">
+                          <PieChart className="w-5 h-5 mr-2 text-green-600" />
                           Income Categories
                         </h3>
-                        <p className="text-gray-600">Breakdown of income sources</p>
+                        <p className="text-gray-600 text-xs">Breakdown of income sources</p>
                       </div>
-                      
-                      <div className="flex items-center justify-center mb-6">
+
+                      <div className="flex items-center justify-center mb-2">
                         <div className="relative">
-                          <svg className="w-64 h-64 transform -rotate-90" viewBox="0 0 100 100">
+                          <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 100 100">
                             {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
                               const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
                               const colors = ['#10B981', '#059669', '#047857', '#065F46', '#064E3B', '#022C22'];
-                              const circumference = 2 * Math.PI * 30;
+                              const circumference = 2 * Math.PI * 15;
                               const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
                               const strokeDashoffset = -topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalIncome) * circumference), 0);
-                              
+
                               return (
                                 <g key={category}>
                                   <circle
@@ -158,59 +158,41 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                               />
                             )}
                           </svg>
-                          
+
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center bg-white rounded-full w-20 h-20 flex flex-col items-center justify-center shadow-lg border-2 border-green-200">
-                              <div className="text-lg font-bold text-green-600">¥{Math.round(totalIncome / 1000)}k</div>
-                              <div className="text-xs text-gray-500">Total</div>
+                            <div className="text-center bg-white rounded-full w-8 h-8 flex flex-col items-center justify-center shadow-lg border border-green-200">
+                              <div className="text-xs font-bold text-green-600">¥{Math.round(totalIncome / 1000)}k</div>
+                              <div className="text-[8px] text-gray-500">Total</div>
                             </div>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-3 max-h-40 overflow-y-auto">
-                        {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
-                          const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
-                          const colors = ['bg-green-500', 'bg-green-600', 'bg-green-700', 'bg-green-800', 'bg-green-900', 'bg-gray-800'];
-                          
-                          return (
-                            <div key={category} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                              <div className="flex items-center space-x-3">
-                                <div className={`w-4 h-4 rounded-full ${colors[index % colors.length]} border-2 border-white shadow-sm`}></div>
-                                <span className="font-medium text-gray-900 truncate">{category}</span>
-                              </div>
-                              <div className="text-right ml-2">
-                                <div className="font-bold text-green-600">¥{Math.round(amount / 1000)}k</div>
-                                <div className="text-xs text-gray-500 font-semibold">{percentage.toFixed(1)}%</div>
-                              </div>
-                            </div>
-                          );
-                        }) : (
-                          <div className="text-center text-gray-500 text-sm py-4">No income data</div>
-                        )}
+                        {/* Hide category list for compact view */}
                       </div>
                     </div>
 
                     {/* Graph 2: Expense Category Breakdown */}
-                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
-                      <div className="mb-6">
-                        <h3 className="text-xl font-semibold text-gray-900 flex items-center mb-2">
-                          <PieChart className="w-6 h-6 mr-3 text-red-600" />
+                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 flex flex-col items-center justify-center" style={{ width: '25%' }}>
+                      <div className="mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-1">
+                          <PieChart className="w-5 h-5 mr-2 text-red-600" />
                           Expense Categories
                         </h3>
-                        <p className="text-gray-600">Breakdown of spending by category</p>
+                        <p className="text-gray-600 text-xs">Breakdown of spending by category</p>
                       </div>
-                      
-                      <div className="flex items-center justify-center mb-6">
+
+                      <div className="flex items-center justify-center mb-2">
                         <div className="relative">
-                          <svg className="w-64 h-64 transform -rotate-90" viewBox="0 0 100 100">
+                          <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 100 100">
                             {topExpenseCategories.length > 0 ? topExpenseCategories.map(([category, amount], index) => {
                               const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
                               const colors = ['#EF4444', '#DC2626', '#B91C1C', '#991B1B', '#7F1D1D', '#450A0A'];
-                              const circumference = 2 * Math.PI * 30;
+                              const circumference = 2 * Math.PI * 15;
                               const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
                               const strokeDashoffset = -topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalExpenses) * circumference), 0);
-                              
+
                               return (
                                 <g key={category}>
                                   <circle
@@ -251,36 +233,18 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                               />
                             )}
                           </svg>
-                          
+
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center bg-white rounded-full w-20 h-20 flex flex-col items-center justify-center shadow-lg border-2 border-red-200">
-                              <div className="text-lg font-bold text-red-600">¥{Math.round(totalExpenses / 1000)}k</div>
-                              <div className="text-xs text-gray-500">Total</div>
+                            <div className="text-center bg-white rounded-full w-8 h-8 flex flex-col items-center justify-center shadow-lg border border-red-200">
+                              <div className="text-xs font-bold text-red-600">¥{Math.round(totalExpenses / 1000)}k</div>
+                              <div className="text-[8px] text-gray-500">Total</div>
                             </div>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-3 max-h-40 overflow-y-auto">
-                        {topExpenseCategories.length > 0 ? topExpenseCategories.map(([category, amount], index) => {
-                          const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
-                          const colors = ['bg-red-500', 'bg-red-600', 'bg-red-700', 'bg-red-800', 'bg-red-900', 'bg-gray-800'];
-                          
-                          return (
-                            <div key={category} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                              <div className="flex items-center space-x-3">
-                                <div className={`w-4 h-4 rounded-full ${colors[index % colors.length]} border-2 border-white shadow-sm`}></div>
-                                <span className="font-medium text-gray-900 truncate">{category}</span>
-                              </div>
-                              <div className="text-right ml-2">
-                                <div className="font-bold text-red-600">¥{Math.round(amount / 1000)}k</div>
-                                <div className="text-xs text-gray-500 font-semibold">{percentage.toFixed(1)}%</div>
-                              </div>
-                            </div>
-                          );
-                        }) : (
-                          <div className="text-center text-gray-500 text-sm py-4">No expense data</div>
-                        )}
+                        {/* Hide category list for compact view */}
                       </div>
                     </div>
                   </div>
@@ -294,7 +258,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       </h3>
                       <p className="text-gray-600">Side-by-side comparison of monthly income and expenses over the last 6 months</p>
                     </div>
-                    
+
                     {/* Bar Chart Container */}
                     <div style={{ position: 'relative' }}>
                       {/* Y-axis labels */}
@@ -317,7 +281,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         <div style={{ textAlign: 'right' }}>¥{Math.round(maxMonthlyAmount * 0.25 / 1000)}k</div>
                         <div style={{ textAlign: 'right' }}>¥0</div>
                       </div>
-                      
+
                       {/* Chart Container */}
                       <div style={{
                         marginLeft: '80px',
@@ -337,7 +301,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                             // Calculate bar heights (minimum 8px for visibility)
                             const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 320, data.income > 0 ? 8 : 4);
                             const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 320, data.expenses > 0 ? 8 : 4);
-                            
+
                             return (
                               <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 {/* Bar pair container */}
@@ -364,7 +328,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                   }}>
                                     {incomeHeight > 40 && data.income > 0 && `¥${Math.round(data.income / 1000)}k`}
                                   </div>
-                                  
+
                                   {/* Expense Bar - RED */}
                                   <div style={{
                                     width: '50px',
@@ -388,7 +352,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                     {expenseHeight > 40 && data.expenses > 0 && `¥${Math.round(data.expenses / 1000)}k`}
                                   </div>
                                 </div>
-                                
+
                                 {/* Month label and net amount */}
                                 <div style={{ textAlign: 'center' }}>
                                   <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#1F2937', marginBottom: '4px' }}>
@@ -412,7 +376,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Legend */}
                     <div style={{
                       display: 'flex',
