@@ -232,7 +232,9 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
 };
 
 // UFJ CSV parser - handles quoted CSV with thousand separators
-export const parseUFJCSVFile = (data: any[][]): Transaction[] => {
+export const parseUFJCSVFile = (data: any[][], filename?: string): Transaction[] => {
+  // Extract account number from filename (e.g., 4614196_20250810131859.csv -> 4614196)
+  const accountNumber = filename ? filename.split('_')[0].replace('.csv', '') : '';
   const transactions: Transaction[] = [];
   
   // Skip header row and process data
@@ -290,7 +292,7 @@ export const parseUFJCSVFile = (data: any[][]): Transaction[] => {
       category,
       shopName,
       type: transactionType,
-      source: "UFJ Bank",
+      source: accountNumber ? `UFJ Bank (${accountNumber})` : "UFJ Bank",
       originalData: {
         rawRow: row,
         fileType: "UFJ CSV",
@@ -471,7 +473,7 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
                   transactions = parseOricoDetailCSVFile(results.data as any[][]);
                   break;
                 case 'ufj':
-                  transactions = parseUFJCSVFile(results.data as any[][]);
+                  transactions = parseUFJCSVFile(results.data as any[][], file.name);
                   break;
                 default:
                   console.warn(`Unknown file type for ${file.name}, attempting generic parse`);
