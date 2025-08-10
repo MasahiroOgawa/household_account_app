@@ -7,7 +7,7 @@ import { parseCSVFile } from '../utils/csvParser';
 import { detectAndMergeDuplicates } from '../utils/duplicateDetector';
 import { exportTransactionsToCSV } from '../utils/csvExporter';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
-import { LogOut, Upload, Download, BarChart3 } from 'lucide-react';
+import { LogOut, Upload, Download, BarChart3, FileText } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
@@ -20,7 +20,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<ViewMode>('main');
+  const [currentView, setCurrentView] = useState<ViewMode>('upload'); // Start with upload, switch to main after data loaded
 
   const handleFileSelect = async (files: File[]) => {
     setIsLoading(true);
@@ -47,7 +47,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       // Merge with existing transactions and detect duplicates
       const uniqueTransactions = detectAndMergeDuplicates([...transactions, ...allParsedTransactions]);
       setTransactions(uniqueTransactions);
-      setCurrentView('main');
+      setCurrentView('main'); // Always show transaction details after upload
       
       // Show success message
       const processedCount = allParsedTransactions.length;
@@ -92,6 +92,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         );
       case 'status':
         return <StatusView transactions={transactions} />;
+      case 'main':
       default:
         return <TransactionTable transactions={transactions} onExport={handleExport} />;
     }
@@ -117,22 +118,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 Upload
               </button>
               
-              <button
-                onClick={handleExport}
-                disabled={transactions.length === 0}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download CSV
-              </button>
+              {transactions.length > 0 && (
+                <button
+                  onClick={() => setCurrentView('main')}
+                  className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
+                    currentView === 'main' 
+                      ? 'bg-green-600 text-white hover:bg-green-700' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Transactions
+                </button>
+              )}
               
-              <button
-                onClick={() => setCurrentView('status')}
-                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                View Status
-              </button>
+              {transactions.length > 0 && (
+                <button
+                  onClick={() => setCurrentView('status')}
+                  className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
+                    currentView === 'status' 
+                      ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  View Stats
+                </button>
+              )}
               
               <button
                 onClick={onLogout}
