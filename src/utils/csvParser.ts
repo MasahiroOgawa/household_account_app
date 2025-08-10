@@ -231,6 +231,29 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
   return transactions;
 };
 
+// Helper function to check if a UFJ transaction is an internal transfer
+const isUFJInternalTransfer = (category: string, description: string): boolean => {
+  const combined = ((category || '') + ' ' + (description || '')).toLowerCase();
+  
+  // Check for transfers to/from your own accounts (your name: オガワ マサヒロ)
+  if (combined.includes('オガワ') && combined.includes('マサヒロ')) {
+    return true;
+  }
+  
+  // Check for transfers between known account numbers
+  if (combined.includes('3022252') || combined.includes('4614196')) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Helper function to check if a UFJ transaction is a transfer fee
+const isUFJTransferFee = (category: string, description: string): boolean => {
+  const combined = ((category || '') + ' ' + (description || '')).toLowerCase();
+  return combined.includes('手数料') || combined.includes('振込手数料');
+};
+
 // UFJ CSV parser - handles quoted CSV with thousand separators
 export const parseUFJCSVFile = (data: any[][], filename?: string): Transaction[] => {
   // Extract account number from filename (e.g., 4614196_20250810131859.csv -> 4614196)
@@ -279,6 +302,11 @@ export const parseUFJCSVFile = (data: any[][], filename?: string): Transaction[]
     
     if (isNaN(amount) || amount === 0) continue;
     
+    // Skip internal transfers unless they are fees
+    if (isUFJInternalTransfer(categoryStr, descriptionStr) && !isUFJTransferFee(categoryStr, descriptionStr)) {
+      continue; // Skip internal transfer
+    }
+    
     // Extract shop name and categorize
     const shopName = descriptionStr || categoryStr || "UFJ Transaction";
     const category = categorizeUFJTransaction(categoryStr, descriptionStr);
@@ -307,6 +335,196 @@ export const parseUFJCSVFile = (data: any[][], filename?: string): Transaction[]
   return transactions;
 };
 
+// SMBC Bank CSV parser
+export const parseSMBCCSVFile = (data: any[][]): Transaction[] => {
+  const transactions: Transaction[] = [];
+  
+  // Skip header row if it exists
+  const startRow = data[0] && data[0][0] && data[0][0].includes('年月日') ? 1 : 0;
+  
+  for (let i = startRow; i < data.length; i++) {
+    const row = data[i];
+    if (!row || row.length < 5) continue;
+    
+    const dateStr = row[0]; // 年月日
+    const withdrawalStr = row[1]; // お引出し
+    const depositStr = row[2]; // お預入れ  
+    const descriptionStr = row[3]; // お取り扱い内容
+    // const balanceStr = row[4]; // 残高 (not used)
+    
+    if (!dateStr || dateStr.trim() === "") continue;
+    
+    const parsedDate = parseDate(dateStr);
+    if (!parsedDate || !isValid(parsedDate)) continue;
+    
+    // Parse amounts
+    let amount = 0;
+    let transactionType: 'expense' | 'income' = 'expense';
+    
+    const parseAmount = (str: string): number => {
+      if (!str || str.trim() === "") return 0;
+      return parseFloat(str.replace(/,/g, "")) || 0;
+    };
+    
+    const withdrawalAmount = parseAmount(withdrawalStr);
+    const depositAmount = parseAmount(depositStr);
+    
+    if (withdrawalAmount > 0) {
+      amount = withdrawalAmount;
+      transactionType = 'expense';
+    } else if (depositAmount > 0) {
+      amount = depositAmount;
+      transactionType = 'income';
+    } else {
+      continue; // Skip if no amount
+    }
+    
+    if (isNaN(amount) || amount === 0) continue;
+    
+    // Skip internal transfers unless they are fees
+    if (isSMBCInternalTransfer(descriptionStr) && !isSMBCTransferFee(descriptionStr)) {
+      continue; // Skip internal transfer
+    }
+    
+    // Extract shop name and categorize
+    const shopName = extractSMBCShopName(descriptionStr);
+    const category = categorizeSMBCTransaction(descriptionStr);
+    
+    const transaction: Transaction = {
+      id: generateUniqueId("smbc"),
+      date: format(parsedDate, "yyyy-MM-dd"),
+      time: "12:00:00",
+      amount: Math.abs(amount),
+      description: descriptionStr || "SMBC Bank Transaction",
+      category,
+      shopName,
+      type: transactionType,
+      source: "SMBC Bank",
+      originalData: {
+        rawRow: row,
+        fileType: "SMBC Bank CSV",
+        rowNumber: i,
+        encoding: "Shift-JIS",
+      },
+    };
+    
+    transactions.push(transaction);
+  }
+  
+  return transactions;
+};
+
+// Helper function to check if a SMBC transaction is an internal transfer
+const isSMBCInternalTransfer = (description: string): boolean => {
+  if (!description) return false;
+  const desc = description.toLowerCase();
+  
+  // Check for transfers to/from your name
+  if (desc.includes('オガワ') && desc.includes('マサヒロ')) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Helper function to check if a SMBC transaction is a transfer fee
+const isSMBCTransferFee = (description: string): boolean => {
+  if (!description) return false;
+  const desc = description.toLowerCase();
+  return desc.includes('振込手数料') || desc.includes('手数料');
+};
+
+// Extract shop name from SMBC description
+const extractSMBCShopName = (description: string): string => {
+  if (!description) return "SMBC Bank";
+  
+  // Remove common prefixes and clean up
+  let shopName = description
+    .replace(/^振込\s*/, '') // Remove "振込" prefix
+    .replace(/^パソコン振込\s*/, '') // Remove "パソコン振込" prefix
+    .replace(/\(.*?\)/g, '') // Remove content in parentheses
+    .replace(/（.*?）/g, '') // Remove content in Japanese parentheses
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // For credit card transactions, extract the card name
+  if (shopName.includes('オリコ')) {
+    return 'Orico Card Payment';
+  }
+  if (shopName.includes('ミツイスミトモカ')) {
+    return 'Mitsui Sumitomo Card Payment';
+  }
+  
+  return shopName.substring(0, 30) || "SMBC Bank";
+};
+
+// Categorize SMBC transactions
+const categorizeSMBCTransaction = (description: string): string => {
+  if (!description) return 'Other';
+  const desc = description.toLowerCase();
+  
+  // Credit card payments
+  if (desc.includes('オリコ') || desc.includes('orico')) {
+    return 'Credit Card Payment';
+  }
+  if (desc.includes('ミツイスミトモカ') || desc.includes('三井住友')) {
+    return 'Credit Card Payment';
+  }
+  
+  // Bank fees
+  if (desc.includes('振込手数料') || desc.includes('手数料')) {
+    return 'Bank Fee';
+  }
+  
+  // Interest income
+  if (desc.includes('利息') || desc.includes('普通預金利息')) {
+    return 'Interest Income';
+  }
+  
+  // Insurance
+  if (desc.includes('保険') || desc.includes('ソンガイホケン')) {
+    return 'Insurance';
+  }
+  
+  // Salary/Income from known companies
+  if (desc.includes('ワイズ') || desc.includes('ペイメンツ') || desc.includes('ジャパン')) {
+    return 'Salary';
+  }
+  
+  // Bank transfers
+  if (desc.includes('振込') || desc.includes('パソコン振込')) {
+    return 'Bank Transfer';
+  }
+  
+  return 'Other';
+};
+
+// Helper function to check if a JRE Bank transaction is an internal transfer
+const isJREInternalTransfer = (description: string): boolean => {
+  if (!description) return false;
+  const desc = description.toLowerCase();
+  
+  // Check for transfers to/from UFJ Bank with your name
+  if ((desc.includes('三菱ufj銀行') || desc.includes('三菱ｕｆｊ銀行')) && 
+      desc.includes('オカ゛ワ') && desc.includes('マサヒロ')) {
+    return true;
+  }
+  
+  // Check for transfers between known account numbers
+  if (desc.includes('3022252') || desc.includes('4614196')) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Helper function to check if a JRE Bank transaction is a transfer fee
+const isJRETransferFee = (description: string): boolean => {
+  if (!description) return false;
+  const desc = description.toLowerCase();
+  return desc.includes('振込手数料') || desc.includes('手数料');
+};
+
 // JRE Bank CSV parser
 export const parseJREBankCSVFile = (data: any[][]): Transaction[] => {
   const transactions: Transaction[] = [];
@@ -320,7 +538,7 @@ export const parseJREBankCSVFile = (data: any[][]): Transaction[] => {
     
     const dateStr = row[0]; // Date in YYYYMMDD format
     const amountStr = row[1]; // Amount (positive for income, negative for expense)
-    const balanceStr = row[2]; // Balance after transaction
+    // const balanceStr = row[2]; // Balance after transaction (not used)
     const descriptionStr = row[3]; // Transaction description
     
     if (!dateStr || dateStr.trim() === "") continue;
@@ -341,6 +559,11 @@ export const parseJREBankCSVFile = (data: any[][]): Transaction[] => {
     // Parse amount
     const amount = parseFloat(amountStr.replace(/,/g, ""));
     if (isNaN(amount)) continue;
+    
+    // Skip internal transfers unless they are fees
+    if (isJREInternalTransfer(descriptionStr) && !isJRETransferFee(descriptionStr)) {
+      continue; // Skip internal transfer
+    }
     
     // Determine transaction type based on amount sign
     const transactionType: 'expense' | 'income' = amount < 0 ? 'expense' : 'income';
@@ -510,6 +733,7 @@ const detectFileType = (filename: string, data: any[][]): string => {
   if (name.includes('detail')) return 'orico';
   if (name.includes('kal')) return 'orico';
   if (name.includes('rb-torihiki') || name.includes('jre')) return 'jre';
+  if (name.includes('meisai')) return 'smbc';
   
   // Check for UFJ pattern (numeric filename with timestamp)
   if (/\d+_\d+\.csv$/i.test(filename)) {
@@ -533,6 +757,12 @@ const detectFileType = (filename: string, data: any[][]): string => {
           headerStr.includes('支払') || headerStr.includes('預') ||
           headerStr.includes('残高') || headerStr.includes('入払')) {
         return 'ufj';
+      }
+      
+      // SMBC has specific header columns
+      if (headerStr.includes('お引出し') && headerStr.includes('お預入れ') && 
+          headerStr.includes('お取り扱い内容')) {
+        return 'smbc';
       }
     }
   }
@@ -602,6 +832,9 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
                   break;
                 case 'jre':
                   transactions = parseJREBankCSVFile(results.data as any[][]);
+                  break;
+                case 'smbc':
+                  transactions = parseSMBCCSVFile(results.data as any[][]);
                   break;
                 default:
                   console.warn(`Unknown file type for ${file.name}, attempting generic parse`);
