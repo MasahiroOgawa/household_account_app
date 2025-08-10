@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { parseOricoDetailCSVFile } from './csvParser';
 import Papa from 'papaparse';
-const iconv = require('iconv-lite');
+import * as iconv from 'iconv-lite';
 
 describe('CSV Upload (PapaParse simulation)', () => {
   it('should parse transactions from detail202501(2156).csv using PapaParse as in upload', () => {
