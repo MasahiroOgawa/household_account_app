@@ -307,6 +307,130 @@ export const parseUFJCSVFile = (data: any[][], filename?: string): Transaction[]
   return transactions;
 };
 
+// JRE Bank CSV parser
+export const parseJREBankCSVFile = (data: any[][]): Transaction[] => {
+  const transactions: Transaction[] = [];
+  
+  // Skip header row if it exists
+  const startRow = data[0] && data[0][0] && data[0][0].includes('取引日') ? 1 : 0;
+  
+  for (let i = startRow; i < data.length; i++) {
+    const row = data[i];
+    if (!row || row.length < 4) continue;
+    
+    const dateStr = row[0]; // Date in YYYYMMDD format
+    const amountStr = row[1]; // Amount (positive for income, negative for expense)
+    const balanceStr = row[2]; // Balance after transaction
+    const descriptionStr = row[3]; // Transaction description
+    
+    if (!dateStr || dateStr.trim() === "") continue;
+    
+    // Parse date from YYYYMMDD format
+    let parsedDate = null;
+    if (dateStr.length === 8) {
+      const year = dateStr.substring(0, 4);
+      const month = dateStr.substring(4, 6);
+      const day = dateStr.substring(6, 8);
+      parsedDate = new Date(`${year}-${month}-${day}`);
+    } else {
+      parsedDate = parseDate(dateStr);
+    }
+    
+    if (!parsedDate || !isValid(parsedDate)) continue;
+    
+    // Parse amount
+    const amount = parseFloat(amountStr.replace(/,/g, ""));
+    if (isNaN(amount)) continue;
+    
+    // Determine transaction type based on amount sign
+    const transactionType: 'expense' | 'income' = amount < 0 ? 'expense' : 'income';
+    
+    // Extract shop name and categorize
+    const shopName = extractJREShopName(descriptionStr);
+    const category = categorizeJRETransaction(descriptionStr);
+    
+    const transaction: Transaction = {
+      id: generateUniqueId("jre"),
+      date: format(parsedDate, "yyyy-MM-dd"),
+      time: "12:00:00",
+      amount: Math.abs(amount),
+      description: descriptionStr || "JRE Bank Transaction",
+      category,
+      shopName,
+      type: transactionType,
+      source: "JRE Bank",
+      originalData: {
+        rawRow: row,
+        fileType: "JRE Bank CSV",
+        rowNumber: i,
+        encoding: "Shift-JIS",
+      },
+    };
+    
+    transactions.push(transaction);
+  }
+  
+  return transactions;
+};
+
+// Extract shop name from JRE Bank description
+const extractJREShopName = (description: string): string => {
+  if (!description) return "JRE Bank";
+  
+  // Remove account numbers and extra details
+  let shopName = description
+    .replace(/\d{7,}/g, '') // Remove long numbers (account numbers)
+    .replace(/（.*?）/g, '') // Remove content in parentheses
+    .replace(/振込手数料.*$/, '') // Remove fee descriptions
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Extract main shop name from transfers
+  if (shopName.includes('振込先')) {
+    const parts = shopName.split(/\s+/);
+    shopName = parts.find(p => !p.includes('振込') && p.length > 2) || shopName;
+  }
+  
+  return shopName.substring(0, 30) || "JRE Bank";
+};
+
+// Categorize JRE Bank transactions
+const categorizeJRETransaction = (description: string): string => {
+  const desc = description.toLowerCase();
+  
+  // Salary/Income
+  if (desc.includes('給与') || desc.includes('賞与') || desc.includes('給料')) {
+    return 'Salary';
+  }
+  
+  // Card payments
+  if (desc.includes('カード') || desc.includes('card')) {
+    return 'Credit Card';
+  }
+  
+  // ATM
+  if (desc.includes('atm') || desc.includes('現金')) {
+    return 'ATM';
+  }
+  
+  // Transfer
+  if (desc.includes('振込') || desc.includes('振替')) {
+    return 'Bank Transfer';
+  }
+  
+  // Fees
+  if (desc.includes('手数料')) {
+    return 'Bank Fee';
+  }
+  
+  // Utilities
+  if (desc.includes('電気') || desc.includes('ガス') || desc.includes('水道')) {
+    return 'Utilities';
+  }
+  
+  return 'Other';
+};
+
 // Categorize UFJ transactions
 const categorizeUFJTransaction = (category: string, description: string): string => {
   const combined = ((category || '') + ' ' + (description || '')).toLowerCase();
@@ -385,6 +509,7 @@ const detectFileType = (filename: string, data: any[][]): string => {
   if (name.includes('paypay')) return 'paypay';
   if (name.includes('detail')) return 'orico';
   if (name.includes('kal')) return 'orico';
+  if (name.includes('rb-torihiki') || name.includes('jre')) return 'jre';
   
   // Check for UFJ pattern (numeric filename with timestamp)
   if (/\d+_\d+\.csv$/i.test(filename)) {
@@ -474,6 +599,9 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
                   break;
                 case 'ufj':
                   transactions = parseUFJCSVFile(results.data as any[][], file.name);
+                  break;
+                case 'jre':
+                  transactions = parseJREBankCSVFile(results.data as any[][]);
                   break;
                 default:
                   console.warn(`Unknown file type for ${file.name}, attempting generic parse`);
