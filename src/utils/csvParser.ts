@@ -1,4 +1,4 @@
-import Papa from "papaparse";
+import * as Papa from "papaparse";
 import { Transaction } from "../types/Transaction";
 import { format, parse, isValid } from "date-fns";
 
@@ -182,29 +182,232 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
   return transactions;
 };
 
-// Main CSV file parser
+// UFJ CSV parser - handles quoted CSV with thousand separators
+export const parseUFJCSVFile = (data: any[][]): Transaction[] => {
+  const transactions: Transaction[] = [];
+  
+  // Skip header row and process data
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row || row.length < 6) continue;
+    
+    const dateStr = row[0]; // Date column
+    const categoryStr = row[1]; // Category/Type
+    const descriptionStr = row[2]; // Description/Merchant
+    const withdrawalStr = row[3]; // Withdrawal amount
+    const depositStr = row[4]; // Deposit amount
+    // const balanceStr = row[5]; // Balance (not used currently)
+    
+    if (!dateStr || dateStr.trim() === "") continue;
+    
+    const parsedDate = parseDate(dateStr);
+    if (!isValid(parsedDate)) continue;
+    
+    // Parse amounts - handle thousand separators
+    let amount = 0;
+    let transactionType: 'expense' | 'income' = 'expense';
+    
+    const parseAmount = (str: string): number => {
+      if (!str || str.trim() === "") return 0;
+      // Remove thousand separators and parse
+      return parseFloat(str.replace(/,/g, "")) || 0;
+    };
+    
+    const withdrawalAmount = parseAmount(withdrawalStr);
+    const depositAmount = parseAmount(depositStr);
+    
+    if (withdrawalAmount > 0) {
+      amount = withdrawalAmount;
+      transactionType = 'expense';
+    } else if (depositAmount > 0) {
+      amount = depositAmount;
+      transactionType = 'income';
+    } else {
+      continue; // Skip if no amount
+    }
+    
+    if (isNaN(amount) || amount === 0) continue;
+    
+    // Extract shop name and categorize
+    const shopName = descriptionStr || categoryStr || "UFJ Transaction";
+    const category = categorizeUFJTransaction(categoryStr, descriptionStr);
+    
+    const transaction: Transaction = {
+      id: generateUniqueId("ufj"),
+      date: format(parsedDate!, "yyyy-MM-dd"),
+      time: "12:00:00",
+      amount: Math.abs(amount),
+      description: `${categoryStr || ''} - ${descriptionStr || ''}`.trim(),
+      category,
+      shopName,
+      type: transactionType,
+      originalData: {
+        rawRow: row,
+        fileType: "UFJ CSV",
+        rowNumber: i,
+        encoding: "Shift-JIS",
+      },
+    };
+    
+    transactions.push(transaction);
+  }
+  
+  return transactions;
+};
+
+// Categorize UFJ transactions
+const categorizeUFJTransaction = (category: string, description: string): string => {
+  const combined = ((category || '') + ' ' + (description || '')).toLowerCase();
+  
+  // Check for PayPay transactions to avoid duplication
+  if (combined.includes('paypay') || combined.includes('ペイペイ')) {
+    return 'PayPay Transfer';
+  }
+  
+  // ATM and bank transfers
+  if (combined.includes('振込') || combined.includes('振替')) {
+    return 'Transfer';
+  }
+  
+  // Card payments
+  if (combined.includes('カード') || combined.includes('card')) {
+    return 'Card Payment';
+  }
+  
+  // Income
+  if (combined.includes('給与') || combined.includes('賞与') || combined.includes('給料')) {
+    return 'Salary';
+  }
+  
+  // Utilities
+  if (combined.includes('電気') || combined.includes('ガス') || combined.includes('水道')) {
+    return 'Utilities';
+  }
+  
+  // Rent
+  if (combined.includes('家賃') || combined.includes('賃貸')) {
+    return 'Rent';
+  }
+  
+  return 'Other';
+};
+
+// Detect file type from content or filename
+const detectFileType = (filename: string, data: any[][]): string => {
+  const name = filename.toLowerCase();
+  
+  // Check filename patterns
+  if (name.includes('paypay')) return 'paypay';
+  if (name.includes('detail')) return 'orico';
+  if (name.includes('kal')) return 'orico';
+  
+  // Check for UFJ pattern (numeric filename with timestamp)
+  if (/\d+_\d+\.csv$/i.test(filename)) {
+    return 'ufj';
+  }
+  
+  // Check header content if available
+  if (data && data.length > 0) {
+    const header = data[0];
+    if (header && header.length >= 6) {
+      // UFJ typically has these columns - check for Japanese headers
+      const headerStr = header.join(' ');
+      if (headerStr.includes('日付') || headerStr.includes('摘要') || 
+          headerStr.includes('支払') || headerStr.includes('預') ||
+          headerStr.includes('残高') || headerStr.includes('入払')) {
+        return 'ufj';
+      }
+    }
+  }
+  
+  return 'unknown';
+};
+
+// Helper function to decode Shift-JIS in browser
+const decodeShiftJIS = async (arrayBuffer: ArrayBuffer): Promise<string> => {
+  // For browser compatibility, we'll use TextDecoder with fallback
+  try {
+    // Try Shift-JIS if available in browser
+    const decoder = new TextDecoder('shift-jis');
+    return decoder.decode(arrayBuffer);
+  } catch (e) {
+    // Fallback to UTF-8 with replacement characters for unknown bytes
+    const decoder = new TextDecoder('utf-8', { fatal: false });
+    return decoder.decode(arrayBuffer);
+  }
+};
+
+// Main CSV file parser with encoding detection
 export const parseCSVFile = (file: File): Promise<Transaction[]> => {
   return new Promise((resolve, reject) => {
-    Papa.parse(file, {
-      header: false,
-      skipEmptyLines: true,
-      complete: (results) => {
-        try {
-          let transactions: Transaction[] = [];
-          const name = file.name.toLowerCase();
-          if (name.includes("paypay")) {
-            transactions = parsePayPayCSVFile(results.data as any[][]);
-          } else if (name.includes("detail") || name.includes("kal")) {
-            transactions = parseOricoDetailCSVFile(results.data as any[][]);
-          }
-          resolve(transactions);
-        } catch (error) {
-          reject(error);
+    const reader = new FileReader();
+    
+    reader.onload = async (event) => {
+      try {
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Try to detect if it's Shift-JIS encoded (common for Japanese bank files)
+        let csvText: string;
+        
+        // Check if file contains Japanese characters (high byte values)
+        const hasJapaneseChars = uint8Array.some(byte => byte > 0x7F);
+        
+        if (hasJapaneseChars) {
+          // Try Shift-JIS first for Japanese files
+          csvText = await decodeShiftJIS(arrayBuffer);
+        } else {
+          // Use UTF-8 for regular files
+          csvText = new TextDecoder('utf-8').decode(uint8Array);
         }
-      },
-      error: (error) => {
+        
+        // Parse CSV
+        Papa.parse(csvText, {
+          header: false,
+          skipEmptyLines: true,
+          complete: (results) => {
+            try {
+              const fileType = detectFileType(file.name, results.data as any[][]);
+              let transactions: Transaction[] = [];
+              
+              switch (fileType) {
+                case 'paypay':
+                  transactions = parsePayPayCSVFile(results.data as any[][]);
+                  break;
+                case 'orico':
+                  transactions = parseOricoDetailCSVFile(results.data as any[][]);
+                  break;
+                case 'ufj':
+                  transactions = parseUFJCSVFile(results.data as any[][]);
+                  break;
+                default:
+                  console.warn(`Unknown file type for ${file.name}, attempting generic parse`);
+                  transactions = parseOricoDetailCSVFile(results.data as any[][]);
+              }
+              
+              if (transactions.length === 0) {
+                reject(new Error(`No valid transactions found in ${file.name}`));
+              } else {
+                resolve(transactions);
+              }
+            } catch (error: any) {
+              reject(error);
+            }
+          },
+          error: (error: any) => {
+            reject(error);
+          },
+        });
+      } catch (error) {
         reject(error);
-      },
-    });
+      }
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Failed to read file'));
+    };
+    
+    // Read file as ArrayBuffer to handle encoding
+    reader.readAsArrayBuffer(file);
   });
 };

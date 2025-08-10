@@ -9,6 +9,7 @@ This is a Household Account Book application - a financial management tool that 
 ## Key Commands
 
 ### Development
+
 ```bash
 # Start development server with hot reload
 npm run dev
@@ -24,11 +25,13 @@ npm run preview
 ```
 
 ### Testing
-No test runner is currently configured. The project has Jest dependencies but no test script defined in package.json.
+
+Add unit tests and integration tests for all the functions.
 
 ## Architecture Overview
 
 ### Core Data Flow
+
 1. **CSV Upload** → User uploads CSV files through `FileUpload.tsx`
 2. **Format Detection** → `csvParser.ts` identifies file type (Orico/KAL/PayPay/Generic)
 3. **Data Parsing** → Format-specific parsing with Japanese encoding support
@@ -42,6 +45,7 @@ No test runner is currently configured. The project has Jest dependencies but no
 ### Key Technical Decisions
 
 **CSV Processing Strategy**: The application uses PapaParse for CSV parsing but implements custom logic for each financial institution's format. The parser handles:
+
 - Japanese character encoding (Shift-JIS) using iconv-lite
 - Multiple date formats including Japanese dates
 - Various currency representations
@@ -61,12 +65,18 @@ No test runner is currently configured. The project has Jest dependencies but no
 ## Development Considerations
 
 When modifying CSV parsing:
+
 - Test with files from `data/` directory
 - Maintain backward compatibility with existing formats
 - Handle Japanese text encoding properly
 - Preserve duplicate detection logic accuracy
+- duplicate detection should work versatile all input files.
+- e.g. expense paypay in ufj file don't need to import because the detail of paypay expense is recorded in paypay csv files.
+- use base csv parse function to make the code simple.
+- In the final product, all possible csv file should be able to treat. So try to generalize functions.
 
 When adding new financial institutions:
+
 - Add detection logic in `detectFileType()` in csvParser.ts
 - Implement format-specific parsing function
 - Test with real CSV samples
