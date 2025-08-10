@@ -288,14 +288,19 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         borderLeft: '4px solid #6B7280',
                         borderBottom: '4px solid #6B7280',
                         backgroundColor: '#F9FAFB',
-                        borderBottomLeftRadius: '8px'
+                        borderBottomLeftRadius: '8px',
+                        overflow: 'hidden' // Prevent overflow
                       }}>
                         <div style={{
                           display: 'flex',
                           alignItems: 'flex-end',
-                          justifyContent: 'space-around',
+                          justifyContent: 'center', // Center the bars
                           height: '400px',
-                          padding: '16px'
+                          padding: '8px 16px', // Reduce top/bottom padding
+                          gap: '8px', // Further reduced gap to fit more
+                          overflowX: 'auto', // Add horizontal scroll if needed
+                          maxWidth: '100%', // Ensure it doesn't exceed container width
+                          boxSizing: 'border-box'
                         }}>
                           {monthlyData.map((data, index) => {
                             // Calculate bar heights (minimum 8px for visibility)
@@ -303,71 +308,90 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                             const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 320, data.expenses > 0 ? 8 : 4);
 
                             return (
-                              <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <div key={index} style={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center',
+                                padding: '0 4px', // Minimal padding
+                                backgroundColor: index % 2 === 0 ? 'rgba(243, 244, 246, 0.3)' : 'transparent', // Alternate background
+                                borderRadius: '6px',
+                                minWidth: '80px', // Smaller width to fit more months
+                                flex: '0 0 auto' // Prevent flex shrinking
+                              }}>
                                 {/* Bar pair container */}
-                                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginBottom: '16px' }}>
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'flex-end', 
+                                  gap: '4px', // Smaller gap between same-month bars
+                                  marginBottom: '10px',
+                                  padding: '4px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                  borderRadius: '4px',
+                                  border: '1px solid rgba(229, 231, 235, 0.5)'
+                                }}>
                                   {/* Income Bar - GREEN */}
                                   <div style={{
-                                    width: '50px',
+                                    width: '30px', // Very narrow bars to fit all months
                                     height: `${incomeHeight}px`,
                                     backgroundColor: '#10B981',
                                     border: '2px solid #059669',
-                                    borderTopLeftRadius: '4px',
-                                    borderTopRightRadius: '4px',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    borderTopLeftRadius: '6px',
+                                    borderTopRightRadius: '6px',
+                                    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
                                     cursor: 'pointer',
-                                    transition: 'background-color 0.2s',
+                                    transition: 'all 0.2s ease',
                                     minHeight: '4px',
                                     display: 'flex',
                                     alignItems: 'flex-end',
                                     justifyContent: 'center',
                                     color: 'white',
-                                    fontSize: '10px',
+                                    fontSize: '9px',
                                     fontWeight: 'bold',
-                                    paddingBottom: '4px'
+                                    paddingBottom: '2px'
                                   }}>
-                                    {incomeHeight > 40 && data.income > 0 && `¥${Math.round(data.income / 1000)}k`}
+                                    {incomeHeight > 35 && data.income > 0 && `¥${Math.round(data.income / 1000)}k`}
                                   </div>
 
                                   {/* Expense Bar - RED */}
                                   <div style={{
-                                    width: '50px',
+                                    width: '30px', // Very narrow bars to fit all months
                                     height: `${expenseHeight}px`,
                                     backgroundColor: '#EF4444',
                                     border: '2px solid #DC2626',
-                                    borderTopLeftRadius: '4px',
-                                    borderTopRightRadius: '4px',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    borderTopLeftRadius: '6px',
+                                    borderTopRightRadius: '6px',
+                                    boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)',
                                     cursor: 'pointer',
-                                    transition: 'background-color 0.2s',
+                                    transition: 'all 0.2s ease',
                                     minHeight: '4px',
                                     display: 'flex',
                                     alignItems: 'flex-end',
                                     justifyContent: 'center',
                                     color: 'white',
-                                    fontSize: '10px',
+                                    fontSize: '9px',
                                     fontWeight: 'bold',
-                                    paddingBottom: '4px'
+                                    paddingBottom: '2px'
                                   }}>
-                                    {expenseHeight > 40 && data.expenses > 0 && `¥${Math.round(data.expenses / 1000)}k`}
+                                    {expenseHeight > 35 && data.expenses > 0 && `¥${Math.round(data.expenses / 1000)}k`}
                                   </div>
                                 </div>
 
                                 {/* Month label and net amount */}
-                                <div style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#1F2937', marginBottom: '4px' }}>
+                                <div style={{ textAlign: 'center', minHeight: '60px' }}>
+                                  <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#1F2937', marginBottom: '6px' }}>
                                     {data.shortMonth}
                                   </div>
                                   <div style={{
-                                    fontSize: '12px',
+                                    fontSize: '11px',
                                     fontWeight: '600',
-                                    padding: '4px 8px',
-                                    borderRadius: '9999px',
+                                    padding: '4px 10px',
+                                    borderRadius: '12px',
                                     backgroundColor: (data.income - data.expenses) >= 0 ? '#DCFCE7' : '#FEE2E2',
                                     color: (data.income - data.expenses) >= 0 ? '#166534' : '#991B1B',
-                                    border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BBF7D0' : '#FECACA'}`
+                                    border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BBF7D0' : '#FECACA'}`,
+                                    whiteSpace: 'nowrap'
                                   }}>
-                                    {(data.income - data.expenses) >= 0 ? '+' : ''}¥{(data.income - data.expenses).toLocaleString()}
+                                    {(data.income - data.expenses) >= 0 ? '+' : ''}¥{Math.abs(data.income - data.expenses).toLocaleString()}
                                   </div>
                                 </div>
                               </div>
