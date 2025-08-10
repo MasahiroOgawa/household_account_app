@@ -81,3 +81,11 @@ When adding new financial institutions:
 - Implement format-specific parsing function
 - Test with real CSV samples
 - Update FileUpload component's accepted formats if needed
+
+# Output
+
+- All the pages should be as simple ad easy to understand as possible.
+- Try to visualize to easy to understand the ouptut.
+- category must be detail of transaction, e.g. salary, education, work, hobby, life etc.
+- add the column which represents where is the source. e.g. UFJ transaction etc.
+- sort the transaction by date time.

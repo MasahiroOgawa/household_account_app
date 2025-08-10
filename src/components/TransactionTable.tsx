@@ -92,6 +92,9 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Category
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Source
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Amount
                 </th>
@@ -129,6 +132,17 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
                         {transaction.category}
                       </span>
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      transaction.source?.includes('UFJ') ? 'bg-blue-100 text-blue-800' :
+                      transaction.source?.includes('PayPay') ? 'bg-yellow-100 text-yellow-800' :
+                      transaction.source?.includes('Orico') ? 'bg-purple-100 text-purple-800' :
+                      transaction.source?.includes('KAL') ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {transaction.source || 'Unknown'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${

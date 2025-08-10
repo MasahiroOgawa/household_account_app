@@ -9,7 +9,8 @@ export const exportTransactionsToCSV = (transactions: Transaction[], filename: s
     Type: transaction.type,
     Description: transaction.description,
     Category: transaction.category,
-    'Shop Name': transaction.shopName
+    'Shop Name': transaction.shopName,
+    Source: transaction.source
   }));
 
   const csv = Papa.unparse(csvData);

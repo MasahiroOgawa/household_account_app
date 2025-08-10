@@ -59,32 +59,58 @@ const categorizeOricoTransaction = (
   shopName: string
 ): string => {
   const combined = (merchantField + " " + shopName).toLowerCase();
-  if (combined.includes("東京ガス") || combined.includes("ガス"))
+  
+  // Utilities
+  if (combined.includes("東京ガス") || combined.includes("ガス") ||
+      combined.includes("東京電力") || combined.includes("電力") || 
+      combined.includes("電気") || combined.includes("水道"))
     return "Utilities";
-  if (
-    combined.includes("東京電力") ||
-    combined.includes("電力") ||
-    combined.includes("電気")
-  )
-    return "Utilities";
-  if (combined.includes("水道")) return "Utilities";
-  if (
-    combined.includes("ジェイアール") ||
-    combined.includes("jr") ||
-    combined.includes("東日本")
-  )
+  
+  // Transportation
+  if (combined.includes("ジェイアール") || combined.includes("jr") ||
+      combined.includes("東日本") || combined.includes("地下鉄") || 
+      combined.includes("メトロ") || combined.includes("バス") ||
+      combined.includes("タクシー"))
     return "Transportation";
-  if (combined.includes("地下鉄") || combined.includes("メトロ"))
-    return "Transportation";
-  if (combined.includes("アトレ") || combined.includes("デパート"))
-    return "Shopping";
-  if (combined.includes("ヤキトンタチキ") || combined.includes("居酒屋"))
+  
+  // Food & Dining
+  if (combined.includes("スーパー") || combined.includes("コンビニ") ||
+      combined.includes("セブン") || combined.includes("ローソン") ||
+      combined.includes("ファミリーマート"))
+    return "Groceries";
+  
+  if (combined.includes("レストラン") || combined.includes("居酒屋") ||
+      combined.includes("カフェ") || combined.includes("食堂") ||
+      combined.includes("ヤキトンタチキ"))
     return "Dining";
-  if (combined.includes("amazon") || combined.includes("アマゾン"))
+  
+  // Shopping
+  if (combined.includes("アトレ") || combined.includes("デパート") ||
+      combined.includes("ショッピング") || combined.includes("モール"))
+    return "Shopping";
+  
+  if (combined.includes("amazon") || combined.includes("アマゾン") ||
+      combined.includes("rakuten") || combined.includes("楽天") ||
+      combined.includes("メルカリ"))
     return "Online Shopping";
-  if (combined.includes("rakuten") || combined.includes("楽天"))
-    return "Online Shopping";
-  return "Other";
+  
+  // Entertainment & Hobby
+  if (combined.includes("映画") || combined.includes("シネマ") ||
+      combined.includes("ゲーム") || combined.includes("本屋") ||
+      combined.includes("書店"))
+    return "Hobby";
+  
+  // Health & Medical
+  if (combined.includes("病院") || combined.includes("クリニック") ||
+      combined.includes("薬局") || combined.includes("ドラッグ"))
+    return "Healthcare";
+  
+  // Education
+  if (combined.includes("学校") || combined.includes("塾") ||
+      combined.includes("教育") || combined.includes("レッスン"))
+    return "Education";
+  
+  return "Life";
 };
 
 // PayPay CSV parser
@@ -113,6 +139,7 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
       category,
       shopName,
       type: "expense",
+      source: "PayPay",
       originalData: {
         rawRow: row,
         fileType: "PayPay CSV",
@@ -154,6 +181,9 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
     const shopName = extractOricoShopName(merchantStr);
     const description = merchantStr || "Orico Transaction";
     const category = categorizeOricoTransaction(merchantStr, shopName);
+    const isKAL = row[1] && row[1].includes('KAL');
+    const source = isKAL ? "KAL Card" : "Orico Card";
+    
     const transaction: Transaction = {
       id: generateUniqueId(`orico_${transactionIndex}`),
       date: format(parsedDate!, "yyyy-MM-dd"),
@@ -163,6 +193,7 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
       category,
       shopName,
       type: "expense",
+      source,
       originalData: {
         rawRow: row,
         fileType: "Orico/Detail CSV",
@@ -241,6 +272,7 @@ export const parseUFJCSVFile = (data: any[][]): Transaction[] => {
       category,
       shopName,
       type: transactionType,
+      source: "UFJ Bank",
       originalData: {
         rawRow: row,
         fileType: "UFJ CSV",
@@ -259,37 +291,70 @@ export const parseUFJCSVFile = (data: any[][]): Transaction[] => {
 const categorizeUFJTransaction = (category: string, description: string): string => {
   const combined = ((category || '') + ' ' + (description || '')).toLowerCase();
   
-  // Check for PayPay transactions to avoid duplication
-  if (combined.includes('paypay') || combined.includes('ペイペイ')) {
-    return 'PayPay Transfer';
-  }
-  
-  // ATM and bank transfers
-  if (combined.includes('振込') || combined.includes('振替')) {
-    return 'Transfer';
-  }
-  
-  // Card payments
-  if (combined.includes('カード') || combined.includes('card')) {
-    return 'Card Payment';
-  }
-  
-  // Income
-  if (combined.includes('給与') || combined.includes('賞与') || combined.includes('給料')) {
+  // Income categories
+  if (combined.includes('給与') || combined.includes('賞与') || 
+      combined.includes('給料') || combined.includes('賃金')) {
     return 'Salary';
   }
   
-  // Utilities
-  if (combined.includes('電気') || combined.includes('ガス') || combined.includes('水道')) {
-    return 'Utilities';
+  if (combined.includes('配当') || combined.includes('利息')) {
+    return 'Investment Income';
   }
   
-  // Rent
-  if (combined.includes('家賃') || combined.includes('賃貸')) {
+  // Living expenses
+  if (combined.includes('家賃') || combined.includes('賃貸') ||
+      combined.includes('管理費') || combined.includes('共益費')) {
     return 'Rent';
   }
   
-  return 'Other';
+  if (combined.includes('電気') || combined.includes('ガス') || 
+      combined.includes('水道') || combined.includes('電力')) {
+    return 'Utilities';
+  }
+  
+  // Financial services
+  if (combined.includes('paypay') || combined.includes('ペイペイ')) {
+    return 'E-Money Transfer';
+  }
+  
+  if (combined.includes('カード') || combined.includes('card')) {
+    return 'Credit Card';
+  }
+  
+  // Bank operations
+  if (combined.includes('振込') || combined.includes('振替')) {
+    return 'Bank Transfer';
+  }
+  
+  if (combined.includes('atm') || combined.includes('引出') || 
+      combined.includes('預入')) {
+    return 'ATM';
+  }
+  
+  // Education
+  if (combined.includes('学費') || combined.includes('授業料') ||
+      combined.includes('教育')) {
+    return 'Education';
+  }
+  
+  // Healthcare
+  if (combined.includes('医療') || combined.includes('病院') ||
+      combined.includes('診療')) {
+    return 'Healthcare';
+  }
+  
+  // Insurance
+  if (combined.includes('保険') || combined.includes('年金')) {
+    return 'Insurance';
+  }
+  
+  // Tax
+  if (combined.includes('税') || combined.includes('所得税') ||
+      combined.includes('住民税')) {
+    return 'Tax';
+  }
+  
+  return 'Life';
 };
 
 // Detect file type from content or filename
