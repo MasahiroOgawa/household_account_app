@@ -80,7 +80,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Transaction Files</h2>
               <p className="text-gray-600">
-                Import multiple bank statements, credit card reports, or previous CSV exports at once.
+                Import multiple bank statements, credit card reports at once.
               </p>
             </div>
             <FileUpload onFileSelect={handleFileSelect} isLoading={isLoading} error={error} />

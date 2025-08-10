@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Upload, FileText, AlertCircle, X } from 'lucide-react';
+import { FileText, AlertCircle, X } from 'lucide-react';
 
 interface FileUploadProps {
   onFileSelect: (files: File[]) => void;
@@ -57,36 +57,30 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 transition-colors cursor-pointer"
+        className="border-2 border-dashed border-gray-300 rounded-lg p-8"
       >
         <div className="flex flex-col items-center space-y-4">
-          <div className="bg-primary-50 p-4 rounded-full">
-            <Upload className="w-8 h-8 text-primary-600" />
-          </div>
-          <div>
-            <p className="text-lg font-medium text-gray-900 mb-2">
-              Upload Bank Statements
-            </p>
-            <p className="text-gray-600 mb-4">
-              Drag and drop multiple CSV files here, or click to browse
-            </p>
-            <input
-              type="file"
-              accept=".csv"
-              multiple
-              onChange={handleFileInput}
-              className="hidden"
-              id="file-upload"
-              disabled={isLoading}
-            />
-            <label
-              htmlFor="file-upload"
-              className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <FileText className="w-5 h-5 mr-2" />
-              Choose Files
-            </label>
-          </div>
+          <label
+            htmlFor="file-upload"
+            className="p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+          >
+            <FileText className="w-8 h-8 text-gray-500" />
+          </label>
+          <p className="text-gray-500 text-sm">
+            {selectedFiles.length === 0 ? 'No files selected' : `${selectedFiles.length} file(s) ready to upload`}
+          </p>
+          <p className="text-gray-400 text-xs">
+            Drag and drop CSV files here or click the icon above
+          </p>
+          <input
+            type="file"
+            accept=".csv"
+            multiple
+            onChange={handleFileInput}
+            style={{ display: 'none' }}
+            id="file-upload"
+            disabled={isLoading}
+          />
         </div>
       </div>
 
@@ -142,12 +136,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-medium text-blue-900 mb-2">Multiple File Upload Features:</h4>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Select multiple CSV files at once</li>
-          <li>• Drag and drop multiple files simultaneously</li>
-          <li>• Automatic duplicate detection across all files</li>
-          <li>• Support for bank statements, credit cards, and previous exports</li>
-          <li>• <strong>Enhanced support for Orico KAL_...csv files</strong></li>
+        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+          <li>Select multiple CSV files at once</li>
+          <li>Drag and drop multiple files simultaneously</li>
+          <li>Automatic duplicate detection across all files</li>
+          <li>Support for bank statements, credit cards, and previous exports</li>
+          <li><strong>Enhanced support for Orico KAL_...csv files</strong></li>
         </ul>
       </div>
     </div>
