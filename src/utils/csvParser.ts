@@ -1,6 +1,13 @@
-import Papa from 'papaparse';
-import { Transaction } from '../types/Transaction';
-import { format, parse, isValid } from 'date-fns';
+import Papa from "papaparse";
+import { Transaction } from "../types/Transaction";
+import { format, parse, isValid } from "date-fns";
+
+// Unique ID generator using timestamp and counter
+let idCounter = 0;
+const generateUniqueId = (prefix: string): string => {
+  idCounter = (idCounter + 1) % 100000;
+  return `${prefix}_${Date.now()}_${idCounter}_${Math.floor(Math.random() * 1000)}`;
+};
 
 // Helper functions
 const parseDate = (dateString: string): Date | null => {
@@ -12,12 +19,12 @@ const parseDate = (dateString: string): Date | null => {
     if (isValid(date)) return date;
   }
   const formats = [
-    'yyyy/MM/dd',
-    'yyyy/M/d',
-    'yyyy-MM-dd',
-    'yyyy-M-d',
-    'MM/dd/yyyy',
-    'dd/MM/yyyy'
+    "yyyy/MM/dd",
+    "yyyy/M/d",
+    "yyyy-MM-dd",
+    "yyyy-M-d",
+    "MM/dd/yyyy",
+    "dd/MM/yyyy",
   ];
   for (const formatString of formats) {
     try {
@@ -32,31 +39,50 @@ const parseDate = (dateString: string): Date | null => {
 };
 
 const extractOricoShopName = (merchantField: string): string => {
-  if (!merchantField) return 'Unknown';
+  if (!merchantField) return "Unknown";
   let shopName = merchantField
-    .replace(/お客様番号:.*$/, '')
-    .replace(/番号:.*$/, '')
-    .replace(/\s*:\s*.*$/, '')
-    .replace(/\s+/g, ' ')
+    .replace(/お客様番号:.*$/, "")
+    .replace(/番号:.*$/, "")
+    .replace(/\s*:\s*.*$/, "")
+    .replace(/\s+/g, " ")
     .trim();
   if (shopName.length > 25) {
-    shopName = shopName.substring(0, 25) + '...';
+    shopName = shopName.substring(0, 25) + "...";
   }
-  return shopName || 'Unknown';
+  return shopName || "Unknown";
 };
 
-const categorizeOricoTransaction = (merchantField: string, shopName: string): string => {
-  const combined = (merchantField + ' ' + shopName).toLowerCase();
-  if (combined.includes('東京ガス') || combined.includes('ガス')) return 'Utilities';
-  if (combined.includes('東京電力') || combined.includes('電力') || combined.includes('電気')) return 'Utilities';
-  if (combined.includes('水道')) return 'Utilities';
-  if (combined.includes('ジェイアール') || combined.includes('jr') || combined.includes('東日本')) return 'Transportation';
-  if (combined.includes('地下鉄') || combined.includes('メトロ')) return 'Transportation';
-  if (combined.includes('アトレ') || combined.includes('デパート')) return 'Shopping';
-  if (combined.includes('ヤキトンタチキ') || combined.includes('居酒屋')) return 'Dining';
-  if (combined.includes('amazon') || combined.includes('アマゾン')) return 'Online Shopping';
-  if (combined.includes('rakuten') || combined.includes('楽天')) return 'Online Shopping';
-  return 'Other';
+const categorizeOricoTransaction = (
+  merchantField: string,
+  shopName: string
+): string => {
+  const combined = (merchantField + " " + shopName).toLowerCase();
+  if (combined.includes("東京ガス") || combined.includes("ガス"))
+    return "Utilities";
+  if (
+    combined.includes("東京電力") ||
+    combined.includes("電力") ||
+    combined.includes("電気")
+  )
+    return "Utilities";
+  if (combined.includes("水道")) return "Utilities";
+  if (
+    combined.includes("ジェイアール") ||
+    combined.includes("jr") ||
+    combined.includes("東日本")
+  )
+    return "Transportation";
+  if (combined.includes("地下鉄") || combined.includes("メトロ"))
+    return "Transportation";
+  if (combined.includes("アトレ") || combined.includes("デパート"))
+    return "Shopping";
+  if (combined.includes("ヤキトンタチキ") || combined.includes("居酒屋"))
+    return "Dining";
+  if (combined.includes("amazon") || combined.includes("アマゾン"))
+    return "Online Shopping";
+  if (combined.includes("rakuten") || combined.includes("楽天"))
+    return "Online Shopping";
+  return "Other";
 };
 
 // PayPay CSV parser
@@ -69,34 +95,37 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
     const dateStr = row[0];
     const merchantStr = row[1];
     const amountStr = row[2];
-    if (typeof dateStr !== 'string' || !dateStr.match(/\d+/)) continue;
+    if (typeof dateStr !== "string" || !dateStr.match(/\d+/)) continue;
     const parsedDate = parseDate(dateStr);
     const amount = parseFloat(amountStr);
     if (!isValid(parsedDate) || isNaN(amount)) continue;
     const shopName = extractOricoShopName(merchantStr);
-    const description = merchantStr || 'PayPay Transaction';
+    const description = merchantStr || "PayPay Transaction";
     const category = categorizeOricoTransaction(merchantStr, shopName);
     const transaction: Transaction = {
-      id: `paypay_${Date.now()}_${transactionIndex}_${Math.random()}`,
-      date: parsedDate ? format(parsedDate, 'yyyy-MM-dd') : '',
-      time: '12:00:00',
+      id: generateUniqueId('paypay'),
+      date: parsedDate ? format(parsedDate, "yyyy-MM-dd") : "",
+      time: "12:00:00",
       amount: Math.abs(amount),
       description,
       category,
       shopName,
-      type: 'expense',
+      type: "expense",
       originalData: {
         rawRow: row,
-        fileType: 'PayPay CSV',
+        fileType: "PayPay CSV",
         rowNumber: i,
-        encoding: 'UTF-8'
-      }
+        encoding: "UTF-8",
+      },
     };
     transactions.push(transaction);
     transactionIndex++;
   }
   if (transactions.length === 0) {
-    console.warn('No valid transactions found. First 5 rows:', data.slice(0, 5));
+    console.warn(
+      "No valid transactions found. First 5 rows:",
+      data.slice(0, 5)
+    );
   }
   return transactions;
 };
@@ -105,44 +134,48 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
 export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
   const transactions: Transaction[] = [];
   let transactionIndex = 0;
-  for (let i = 1; i < data.length; i++) { // skip header
+  for (let i = 1; i < data.length; i++) {
+    // skip header
     const row = data[i];
     if (!row || row.length < 9) continue;
     const dateStr = row[0];
-    if (!dateStr || dateStr.trim() === '') continue; // skip rows with empty date
+    if (!dateStr || dateStr.trim() === "") continue; // skip rows with empty date
     const merchantStr = row[1];
     // Try column 8 for amount (KAL format), fallback to column 5 (Orico format)
     let amountStr = row[8] || row[5];
     if (!amountStr) continue;
     // Clean up amount: remove backslash, commas, quotes
-    amountStr = amountStr.replace(/\\|"|,/g, '').trim();
+    amountStr = amountStr.replace(/\\|"|,/g, "").trim();
     const parsedDate = parseDate(dateStr);
     const amount = parseFloat(amountStr);
     if (!isValid(parsedDate) || isNaN(amount)) continue;
     const shopName = extractOricoShopName(merchantStr);
-    const description = merchantStr || 'Orico Transaction';
+    const description = merchantStr || "Orico Transaction";
     const category = categorizeOricoTransaction(merchantStr, shopName);
     const transaction: Transaction = {
-      id: `orico_${Date.now()}_${transactionIndex}_${Math.random()}`,
-      date: parsedDate ? format(parsedDate, 'yyyy-MM-dd') : '',
-      time: '12:00:00',
+      id: generateUniqueId(`orico_${transactionIndex}`),
+      date: parsedDate ? format(parsedDate, "yyyy-MM-dd") : "",
+      time: "12:00:00",
       amount: Math.abs(amount),
       description,
       category,
       shopName,
-      type: amount >= 0 ? 'expense' : 'income',
+      type: amount >= 0 ? "expense" : "income",
       originalData: {
         rawRow: row,
-        fileType: 'Orico/Detail CSV',
+        fileType: "Orico/Detail CSV",
         rowNumber: i,
-        encoding: 'UTF-8'
-      }
+        encoding: "UTF-8",
+      },
     };
     transactions.push(transaction);
     transactionIndex++;
   }
   if (transactions.length === 0) {
-    console.warn('No valid transactions found in Orico/Detail CSV. First 5 rows:', data.slice(0, 5));
+    console.warn(
+      "No valid transactions found in Orico/Detail CSV. First 5 rows:",
+      data.slice(0, 5)
+    );
   }
   return transactions;
 };
@@ -157,9 +190,9 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
         try {
           let transactions: Transaction[] = [];
           const name = file.name.toLowerCase();
-          if (name.includes('paypay')) {
+          if (name.includes("paypay")) {
             transactions = parsePayPayCSVFile(results.data as any[][]);
-          } else if (name.includes('detail') || name.includes('kal')) {
+          } else if (name.includes("detail") || name.includes("kal")) {
             transactions = parseOricoDetailCSVFile(results.data as any[][]);
           }
           resolve(transactions);
@@ -169,7 +202,7 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
       },
       error: (error) => {
         reject(error);
-      }
+      },
     });
   });
 };
