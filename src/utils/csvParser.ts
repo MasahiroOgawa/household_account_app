@@ -163,21 +163,39 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
 export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
   const transactions: Transaction[] = [];
   let transactionIndex = 0;
+  
+  // Check if this is the new Orico format by looking at headers
+  const header = data[0] || [];
+  const isNewOricoFormat = header.some(col => col && col.includes('利用日'));
+  
   for (let i = 1; i < data.length; i++) {
     // skip header
     const row = data[i];
-    if (!row || row.length < 9) continue;
-    const dateStr = row[0];
+    if (!row || row.length < 5) continue;
+    
+    let dateStr, merchantStr, amountStr;
+    
+    if (isNewOricoFormat) {
+      // New Orico format: "利用日/キャンセル日","利用店名・商品名","利用者","決済方法","支払区分","利用金額",...
+      dateStr = row[0];
+      merchantStr = row[1];
+      amountStr = row[5]; // 利用金額
+    } else {
+      // Legacy format
+      dateStr = row[0];
+      merchantStr = row[1];
+      amountStr = row[8] || row[5];
+    }
+    
     if (!dateStr || dateStr.trim() === "") continue; // skip rows with empty date
-    const merchantStr = row[1];
-    // Try column 8 for amount (KAL format), fallback to column 5 (Orico format)
-    let amountStr = row[8] || row[5];
     if (!amountStr) continue;
+    
     // Clean up amount: remove backslash, commas, quotes
     amountStr = amountStr.replace(/\\|"|,/g, "").trim();
     const parsedDate = parseDate(dateStr);
     const amount = parseFloat(amountStr);
     if (!isValid(parsedDate) || isNaN(amount)) continue;
+    
     const shopName = extractOricoShopName(merchantStr);
     const description = merchantStr || "Orico Transaction";
     const category = categorizeOricoTransaction(merchantStr, shopName);
@@ -375,8 +393,15 @@ const detectFileType = (filename: string, data: any[][]): string => {
   if (data && data.length > 0) {
     const header = data[0];
     if (header && header.length >= 6) {
-      // UFJ typically has these columns - check for Japanese headers
       const headerStr = header.join(' ');
+      
+      // Check for Orico card headers
+      if (headerStr.includes('利用日') || headerStr.includes('利用店名') || 
+          headerStr.includes('決済方法') || headerStr.includes('支払区分')) {
+        return 'orico';
+      }
+      
+      // UFJ typically has these columns - check for Japanese headers
       if (headerStr.includes('日付') || headerStr.includes('摘要') || 
           headerStr.includes('支払') || headerStr.includes('預') ||
           headerStr.includes('残高') || headerStr.includes('入払')) {
@@ -388,17 +413,32 @@ const detectFileType = (filename: string, data: any[][]): string => {
   return 'unknown';
 };
 
-// Helper function to decode Shift-JIS in browser
-const decodeShiftJIS = async (arrayBuffer: ArrayBuffer): Promise<string> => {
-  // For browser compatibility, we'll use TextDecoder with fallback
+// Helper function to detect and decode text with proper encoding
+const detectAndDecodeText = async (arrayBuffer: ArrayBuffer): Promise<string> => {
+  const uint8Array = new Uint8Array(arrayBuffer);
+  
+  // Check for UTF-8 BOM (0xEF, 0xBB, 0xBF)
+  if (uint8Array.length >= 3 && uint8Array[0] === 0xEF && uint8Array[1] === 0xBB && uint8Array[2] === 0xBF) {
+    // File has UTF-8 BOM, decode as UTF-8
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(arrayBuffer);
+  }
+  
+  // Try UTF-8 first (most common for modern files)
   try {
-    // Try Shift-JIS if available in browser
-    const decoder = new TextDecoder('shift-jis');
-    return decoder.decode(arrayBuffer);
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+    const text = decoder.decode(arrayBuffer);
+    return text;
   } catch (e) {
-    // Fallback to UTF-8 with replacement characters for unknown bytes
-    const decoder = new TextDecoder('utf-8', { fatal: false });
-    return decoder.decode(arrayBuffer);
+    // UTF-8 failed, try Shift-JIS for legacy Japanese files
+    try {
+      const decoder = new TextDecoder('shift-jis');
+      return decoder.decode(arrayBuffer);
+    } catch (e2) {
+      // Final fallback to UTF-8 with error replacement
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      return decoder.decode(arrayBuffer);
+    }
   }
 };
 
@@ -410,21 +450,9 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
     reader.onload = async (event) => {
       try {
         const arrayBuffer = event.target?.result as ArrayBuffer;
-        const uint8Array = new Uint8Array(arrayBuffer);
         
-        // Try to detect if it's Shift-JIS encoded (common for Japanese bank files)
-        let csvText: string;
-        
-        // Check if file contains Japanese characters (high byte values)
-        const hasJapaneseChars = uint8Array.some(byte => byte > 0x7F);
-        
-        if (hasJapaneseChars) {
-          // Try Shift-JIS first for Japanese files
-          csvText = await decodeShiftJIS(arrayBuffer);
-        } else {
-          // Use UTF-8 for regular files
-          csvText = new TextDecoder('utf-8').decode(uint8Array);
-        }
+        // Detect and decode text with proper encoding
+        const csvText = await detectAndDecodeText(arrayBuffer);
         
         // Parse CSV
         Papa.parse(csvText, {

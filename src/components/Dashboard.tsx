@@ -6,6 +6,7 @@ import { StatusView } from './StatusView';
 import { parseCSVFile } from '../utils/csvParser';
 import { detectAndMergeDuplicates } from '../utils/duplicateDetector';
 import { exportTransactionsToCSV } from '../utils/csvExporter';
+import { sortTransactionsByDateTime } from '../utils/transactionUtils';
 import { LogOut, Upload, Download, BarChart3 } from 'lucide-react';
 
 interface DashboardProps {
@@ -68,8 +69,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       alert('No transactions to export');
       return;
     }
+    // Sort transactions by date and time (newest first) for export
+    const sortedTransactions = sortTransactionsByDateTime(transactions);
+    
     const filename = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
-    exportTransactionsToCSV(transactions, filename);
+    exportTransactionsToCSV(sortedTransactions, filename);
   };
 
   const renderContent = () => {
