@@ -106,7 +106,7 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
     const category = categorizeOricoTransaction(merchantStr, shopName);
     const transaction: Transaction = {
       id: generateUniqueId("paypay"),
-      date: format(parsedDate, "yyyy-MM-dd"),
+      date: format(parsedDate!, "yyyy-MM-dd"),
       time: "12:00:00",
       amount: Math.abs(amount),
       description,
@@ -156,13 +156,13 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
     const category = categorizeOricoTransaction(merchantStr, shopName);
     const transaction: Transaction = {
       id: generateUniqueId(`orico_${transactionIndex}`),
-      date: format(parsedDate, "yyyy-MM-dd"),
+      date: format(parsedDate!, "yyyy-MM-dd"),
       time: "12:00:00",
       amount: Math.abs(amount),
       description,
       category,
       shopName,
-      type: amount >= 0 ? "expense" : "income",
+      type: "expense",
       originalData: {
         rawRow: row,
         fileType: "Orico/Detail CSV",
