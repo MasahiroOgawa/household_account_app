@@ -2,6 +2,12 @@ import * as Papa from "papaparse";
 import { Transaction } from "../types/Transaction";
 import { format, parse, isValid } from "date-fns";
 
+// Constants for internal transfer detection
+// Max description length for personal transfers - longer descriptions typically indicate business transactions
+const MAX_PERSONAL_TRANSFER_LENGTH = 50;
+// Max length for personal names to track - prevents storing very long text as personal names
+const MAX_PERSONAL_NAME_LENGTH = 30;
+
 // Unique ID generator using timestamp and counter
 let idCounter = 0;
 const generateUniqueId = (prefix: string): string => {
@@ -28,7 +34,7 @@ class CSVParserState {
   }
 
   addPersonalTransferName(name: string): void {
-    if (name && name.length < 30) {
+    if (name && name.length < MAX_PERSONAL_NAME_LENGTH) {
       this.personalTransferNames.add(name.toLowerCase());
     }
   }
@@ -81,7 +87,7 @@ class CSVParserState {
                                    combined.includes('法人') || combined.includes('Co') ||
                                    combined.includes('Ltd') || combined.includes('Inc');
       
-      if (!hasBusinessIndicators && combined.length < 50) {
+      if (!hasBusinessIndicators && combined.length < MAX_PERSONAL_TRANSFER_LENGTH) {
         return true; // Likely internal transfer
       }
     }
@@ -107,7 +113,7 @@ class CSVParserState {
           !combined.includes('給与') && !combined.includes('賞与') && !combined.includes('給料') &&
           !combined.includes('salary') && !combined.includes('ワイズ') && !combined.includes('ペイメン') &&
           !combined.includes('証券') && !combined.includes('投資') && !combined.includes('保険') &&
-          combinedDescription.length < 50) {
+          combinedDescription.length < MAX_PERSONAL_TRANSFER_LENGTH) {
         const namePart = combinedDescription.replace(/[　\s]+/g, ' ').trim();
         this.addPersonalTransferName(namePart);
         return true;
@@ -150,7 +156,7 @@ class CSVParserState {
     }
     
     // Check for personal transfers and track them (but exclude legitimate business income)
-    if (desc.length < 50 && !desc.includes('会社') && !desc.includes('株式') && 
+    if (desc.length < MAX_PERSONAL_TRANSFER_LENGTH && !desc.includes('会社') && !desc.includes('株式') && 
         !desc.includes('（カ') && !desc.includes('法人') &&
         // Exclude salary and legitimate income
         !desc.includes('給与') && !desc.includes('賞与') && !desc.includes('給料') &&
