@@ -82,7 +82,37 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
           <>
             {/* Calculate max amount for scaling */}
             {(() => {
-              const maxMonthlyAmount = Math.max(...monthlyData.map(d => Math.max(d.income, d.expenses)), 100);
+              const rawMaxAmount = Math.max(...monthlyData.map(d => Math.max(d.income, d.expenses)), 100);
+              
+              // Helper function to create nice round numbers for Y-axis
+              const getNiceRoundMax = (value: number): number => {
+                if (value <= 100000) return 100000; // 100k
+                if (value <= 250000) return 250000; // 250k
+                if (value <= 500000) return 500000; // 0.5M
+                if (value <= 1000000) return 1000000; // 1M
+                if (value <= 1500000) return 1500000; // 1.5M
+                if (value <= 2000000) return 2000000; // 2M
+                if (value <= 2500000) return 2500000; // 2.5M
+                if (value <= 3000000) return 3000000; // 3M
+                if (value <= 5000000) return 5000000; // 5M
+                // For larger amounts, round up to nearest million
+                return Math.ceil(value / 1000000) * 1000000;
+              };
+              
+              const maxMonthlyAmount = getNiceRoundMax(rawMaxAmount);
+              
+              // Helper function to format amounts nicely
+              const formatAmount = (amount: number): string => {
+                if (amount >= 1000000) {
+                  const millions = amount / 1000000;
+                  return millions % 1 === 0 ? `${millions}M` : `${millions.toFixed(1)}M`;
+                } else if (amount >= 1000) {
+                  const thousands = amount / 1000;
+                  return thousands % 1 === 0 ? `${thousands}k` : `${thousands.toFixed(0)}k`;
+                } else {
+                  return amount.toString();
+                }
+              };
 
               return (
                 <>
@@ -258,18 +288,20 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         top: '0',
                         height: '400px',
                         width: '80px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
                         fontSize: '12px',
                         color: '#6B7280',
                         paddingRight: '8px'
                       }}>
-                        <div style={{ textAlign: 'right' }}>¥{Math.round(maxMonthlyAmount / 1000)}k</div>
-                        <div style={{ textAlign: 'right' }}>¥{Math.round(maxMonthlyAmount * 0.75 / 1000)}k</div>
-                        <div style={{ textAlign: 'right' }}>¥{Math.round(maxMonthlyAmount * 0.5 / 1000)}k</div>
-                        <div style={{ textAlign: 'right' }}>¥{Math.round(maxMonthlyAmount * 0.25 / 1000)}k</div>
-                        <div style={{ textAlign: 'right' }}>¥0</div>
+                        {/* Top label (100%) */}
+                        <div style={{ textAlign: 'right', position: 'absolute', top: '0px' }}>¥{formatAmount(maxMonthlyAmount)}</div>
+                        {/* 75% label */}
+                        <div style={{ textAlign: 'right', position: 'absolute', top: '100px' }}>¥{formatAmount(maxMonthlyAmount * 0.75)}</div>
+                        {/* 50% label */}
+                        <div style={{ textAlign: 'right', position: 'absolute', top: '200px' }}>¥{formatAmount(maxMonthlyAmount * 0.5)}</div>
+                        {/* 25% label */}
+                        <div style={{ textAlign: 'right', position: 'absolute', top: '300px' }}>¥{formatAmount(maxMonthlyAmount * 0.25)}</div>
+                        {/* Bottom label (0%) - positioned at the very bottom */}
+                        <div style={{ textAlign: 'right', position: 'absolute', bottom: '0px' }}>¥0</div>
                       </div>
 
                       {/* Chart Container */}
@@ -279,114 +311,120 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         borderBottom: '4px solid #6B7280',
                         backgroundColor: '#F9FAFB',
                         borderBottomLeftRadius: '8px',
-                        overflow: 'hidden' // Prevent overflow
+                        overflow: 'hidden'
                       }}>
+                        {/* Bars Area - bars start from bottom */}
                         <div style={{
                           display: 'flex',
                           alignItems: 'flex-end',
-                          justifyContent: 'center', // Center the bars
+                          justifyContent: 'center',
                           height: '400px',
-                          padding: '8px 16px', // Reduce top/bottom padding
-                          gap: '8px', // Further reduced gap to fit more
-                          overflowX: 'auto', // Add horizontal scroll if needed
-                          maxWidth: '100%', // Ensure it doesn't exceed container width
+                          padding: '8px 16px 0 16px', // No bottom padding so bars touch bottom
+                          gap: '8px',
+                          overflowX: 'auto',
+                          maxWidth: '100%',
                           boxSizing: 'border-box'
                         }}>
                           {monthlyData.map((data, index) => {
                             // Calculate bar heights (minimum 8px for visibility)
-                            const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 320, data.income > 0 ? 8 : 4);
-                            const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 320, data.expenses > 0 ? 8 : 4);
+                            const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 392, data.income > 0 ? 8 : 4); // Use full 392px height
+                            const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 392, data.expenses > 0 ? 8 : 4);
 
                             return (
                               <div key={index} style={{ 
                                 display: 'flex', 
-                                flexDirection: 'column', 
-                                alignItems: 'center',
-                                padding: '0 4px', // Minimal padding
-                                backgroundColor: index % 2 === 0 ? 'rgba(243, 244, 246, 0.3)' : 'transparent', // Alternate background
-                                borderRadius: '6px',
-                                minWidth: '80px', // Smaller width to fit more months
-                                flex: '0 0 auto' // Prevent flex shrinking
+                                alignItems: 'flex-end', 
+                                gap: '4px',
+                                padding: '0 4px',
+                                backgroundColor: index % 2 === 0 ? 'rgba(243, 244, 246, 0.3)' : 'transparent',
+                                borderRadius: '6px 6px 0 0', // Only top corners rounded
+                                minWidth: '80px',
+                                flex: '0 0 auto',
+                                height: '100%' // Take full height so bars start from bottom
                               }}>
-                                {/* Bar pair container */}
-                                <div style={{ 
-                                  display: 'flex', 
-                                  alignItems: 'flex-end', 
-                                  gap: '4px', // Smaller gap between same-month bars
-                                  marginBottom: '10px',
-                                  padding: '4px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                  borderRadius: '4px',
-                                  border: '1px solid rgba(229, 231, 235, 0.5)'
+                                {/* Income Bar - GREEN */}
+                                <div style={{
+                                  width: '30px',
+                                  height: `${incomeHeight}px`,
+                                  backgroundColor: '#10B981',
+                                  border: '2px solid #059669',
+                                  borderTopLeftRadius: '6px',
+                                  borderTopRightRadius: '6px',
+                                  boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  minHeight: '4px',
+                                  display: 'flex',
+                                  alignItems: 'flex-end',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontSize: '9px',
+                                  fontWeight: 'bold',
+                                  paddingBottom: '2px'
                                 }}>
-                                  {/* Income Bar - GREEN */}
-                                  <div style={{
-                                    width: '30px', // Very narrow bars to fit all months
-                                    height: `${incomeHeight}px`,
-                                    backgroundColor: '#10B981',
-                                    border: '2px solid #059669',
-                                    borderTopLeftRadius: '6px',
-                                    borderTopRightRadius: '6px',
-                                    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    minHeight: '4px',
-                                    display: 'flex',
-                                    alignItems: 'flex-end',
-                                    justifyContent: 'center',
-                                    color: 'white',
-                                    fontSize: '9px',
-                                    fontWeight: 'bold',
-                                    paddingBottom: '2px'
-                                  }}>
-                                    {incomeHeight > 35 && data.income > 0 && `¥${Math.round(data.income / 1000)}k`}
-                                  </div>
-
-                                  {/* Expense Bar - RED */}
-                                  <div style={{
-                                    width: '30px', // Very narrow bars to fit all months
-                                    height: `${expenseHeight}px`,
-                                    backgroundColor: '#EF4444',
-                                    border: '2px solid #DC2626',
-                                    borderTopLeftRadius: '6px',
-                                    borderTopRightRadius: '6px',
-                                    boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    minHeight: '4px',
-                                    display: 'flex',
-                                    alignItems: 'flex-end',
-                                    justifyContent: 'center',
-                                    color: 'white',
-                                    fontSize: '9px',
-                                    fontWeight: 'bold',
-                                    paddingBottom: '2px'
-                                  }}>
-                                    {expenseHeight > 35 && data.expenses > 0 && `¥${Math.round(data.expenses / 1000)}k`}
-                                  </div>
+                                  {incomeHeight > 35 && data.income > 0 && `¥${Math.round(data.income / 1000)}k`}
                                 </div>
 
-                                {/* Month label and net amount */}
-                                <div style={{ textAlign: 'center', minHeight: '60px' }}>
-                                  <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#1F2937', marginBottom: '6px' }}>
-                                    {data.shortMonth}
-                                  </div>
-                                  <div style={{
-                                    fontSize: '11px',
-                                    fontWeight: '600',
-                                    padding: '4px 10px',
-                                    borderRadius: '12px',
-                                    backgroundColor: (data.income - data.expenses) >= 0 ? '#DCFCE7' : '#FEE2E2',
-                                    color: (data.income - data.expenses) >= 0 ? '#166534' : '#991B1B',
-                                    border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BBF7D0' : '#FECACA'}`,
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {(data.income - data.expenses) >= 0 ? '+' : ''}¥{Math.abs(data.income - data.expenses).toLocaleString()}
-                                  </div>
+                                {/* Expense Bar - RED */}
+                                <div style={{
+                                  width: '30px',
+                                  height: `${expenseHeight}px`,
+                                  backgroundColor: '#EF4444',
+                                  border: '2px solid #DC2626',
+                                  borderTopLeftRadius: '6px',
+                                  borderTopRightRadius: '6px',
+                                  boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  minHeight: '4px',
+                                  display: 'flex',
+                                  alignItems: 'flex-end',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontSize: '9px',
+                                  fontWeight: 'bold',
+                                  paddingBottom: '2px'
+                                }}>
+                                  {expenseHeight > 35 && data.expenses > 0 && `¥${Math.round(data.expenses / 1000)}k`}
                                 </div>
                               </div>
                             );
                           })}
+                        </div>
+                        
+                        {/* X-axis labels area - outside the chart */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          padding: '12px 16px',
+                          backgroundColor: '#FFFFFF',
+                          borderTop: '2px solid #E5E7EB'
+                        }}>
+                          {monthlyData.map((data, index) => (
+                            <div key={index} style={{ 
+                              minWidth: '80px',
+                              textAlign: 'center',
+                              flex: '0 0 auto',
+                              padding: '0 4px'
+                            }}>
+                              <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#1F2937', marginBottom: '6px' }}>
+                                {data.shortMonth}
+                              </div>
+                              <div style={{
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                padding: '4px 10px',
+                                borderRadius: '12px',
+                                backgroundColor: (data.income - data.expenses) >= 0 ? '#DCFCE7' : '#FEE2E2',
+                                color: (data.income - data.expenses) >= 0 ? '#166534' : '#991B1B',
+                                border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BBF7D0' : '#FECACA'}`,
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {(data.income - data.expenses) >= 0 ? '+' : ''}¥{Math.abs(data.income - data.expenses).toLocaleString()}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
