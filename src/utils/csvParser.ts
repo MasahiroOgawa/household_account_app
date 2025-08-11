@@ -906,12 +906,16 @@ const detectFileType = (filename: string, data: any[][]): string => {
 };
 
 // Helper function to detect and decode text with proper encoding
-const detectAndDecodeText = async (arrayBuffer: ArrayBuffer): Promise<string> => {
+const detectAndDecodeText = async (arrayBuffer: ArrayBuffer, filename?: string): Promise<string> => {
   const uint8Array = new Uint8Array(arrayBuffer);
+  const logPrefix = filename ? `[${filename}]` : '[Unknown file]';
+  
+  console.log(`${logPrefix} Detecting encoding for file (${uint8Array.length} bytes)`);
   
   // Check for UTF-8 BOM (0xEF, 0xBB, 0xBF)
   if (uint8Array.length >= 3 && uint8Array[0] === 0xEF && uint8Array[1] === 0xBB && uint8Array[2] === 0xBF) {
     // File has UTF-8 BOM, decode as UTF-8
+    console.log(`${logPrefix} UTF-8 BOM detected, using UTF-8 encoding`);
     const decoder = new TextDecoder('utf-8');
     return decoder.decode(arrayBuffer);
   }
@@ -920,16 +924,32 @@ const detectAndDecodeText = async (arrayBuffer: ArrayBuffer): Promise<string> =>
   try {
     const decoder = new TextDecoder('utf-8', { fatal: true });
     const text = decoder.decode(arrayBuffer);
+    console.log(`${logPrefix} Successfully decoded as UTF-8`);
     return text;
   } catch (e) {
+    console.warn(`${logPrefix} UTF-8 decoding failed:`, e instanceof Error ? e.message : String(e));
+    
     // UTF-8 failed, try Shift-JIS for legacy Japanese files
     try {
       const decoder = new TextDecoder('shift-jis');
-      return decoder.decode(arrayBuffer);
+      const text = decoder.decode(arrayBuffer);
+      console.log(`${logPrefix} Successfully decoded as Shift-JIS`);
+      return text;
     } catch (e2) {
+      console.warn(`${logPrefix} Shift-JIS decoding failed:`, e2 instanceof Error ? e2.message : String(e2));
+      
       // Final fallback to UTF-8 with error replacement
+      console.log(`${logPrefix} Using UTF-8 fallback with error replacement`);
       const decoder = new TextDecoder('utf-8', { fatal: false });
-      return decoder.decode(arrayBuffer);
+      const text = decoder.decode(arrayBuffer);
+      
+      // Count and log replaced characters for debugging
+      const replacedChars = (text.match(/\uFFFD/g) || []).length;
+      if (replacedChars > 0) {
+        console.warn(`${logPrefix} ${replacedChars} characters were replaced with � (U+FFFD) due to encoding issues`);
+      }
+      
+      return text;
     }
   }
 };
@@ -944,7 +964,7 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
         const arrayBuffer = event.target?.result as ArrayBuffer;
         
         // Detect and decode text with proper encoding
-        const csvText = await detectAndDecodeText(arrayBuffer);
+        const csvText = await detectAndDecodeText(arrayBuffer, file.name);
         
         // Parse CSV
         Papa.parse(csvText, {
