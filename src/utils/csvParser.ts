@@ -978,9 +978,6 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
           skipEmptyLines: true,
           complete: (results) => {
             try {
-              // Extract account number from filename if it's a UFJ file
-              defaultParserState.extractAndStoreAccountNumber(file.name);
-              
               const fileType = detectFileType(file.name, results.data as any[][]);
               let transactions: Transaction[] = [];
               
@@ -992,6 +989,8 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
                   transactions = parseOricoDetailCSVFile(results.data as any[][]);
                   break;
                 case 'ufj':
+                  // Extract and store UFJ account number from filename for internal transfer detection
+                  defaultParserState.extractAndStoreAccountNumber(file.name);
                   transactions = parseUFJCSVFile(results.data as any[][], file.name);
                   break;
                 case 'jre':
