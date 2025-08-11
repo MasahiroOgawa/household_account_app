@@ -158,7 +158,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                       y={50 + 20 * Math.sin((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)}
                                       textAnchor="middle"
                                       dominantBaseline="middle"
-                                      className="fill-white"
+                                      fill="black"
                                       style={{ fontSize: '6px', fontWeight: 'bold' }}
                                       transform={`rotate(90 ${50 + 20 * Math.cos((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)} ${50 + 20 * Math.sin((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)})`}
                                     >
@@ -206,43 +206,52 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       <div className="flex items-center justify-center mb-2">
                         <div className="relative">
                           <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
-                            {topExpenseCategories.length > 0 ? topExpenseCategories.map(([category, amount], index) => {
-                              const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
-                              const colors = ['#EF4444', '#DC2626', '#B91C1C', '#991B1B', '#7F1D1D', '#450A0A'];
-                              const circumference = 2 * Math.PI * 15;
-                              const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
-                              const strokeDashoffset = -topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalExpenses) * circumference), 0);
+                            {/* First render all the pie slices */}
+                            {topExpenseCategories.length > 0 ? (
+                              <>
+                                {topExpenseCategories.map(([category, amount], index) => {
+                                  const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
+                                  const colors = ['#EF4444', '#DC2626', '#B91C1C', '#991B1B', '#7F1D1D', '#450A0A'];
+                                  const circumference = 2 * Math.PI * 15;
+                                  const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
+                                  const strokeDashoffset = -topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalExpenses) * circumference), 0);
 
-                              return (
-                                <g key={category}>
-                                  <circle
-                                    cx="50"
-                                    cy="50"
-                                    r="30"
-                                    fill="transparent"
-                                    stroke={colors[index % colors.length]}
-                                    strokeWidth="15"
-                                    strokeDasharray={strokeDasharray}
-                                    strokeDashoffset={strokeDashoffset}
-                                    className="hover:opacity-80 transition-opacity cursor-pointer"
-                                  />
-                                  {/* Add category text on each segment if it's large enough */}
-                                  {percentage > 10 && (
+                                  return (
+                                    <circle
+                                      key={`slice-${category}`}
+                                      cx="50"
+                                      cy="50"
+                                      r="30"
+                                      fill="transparent"
+                                      stroke={colors[index % colors.length]}
+                                      strokeWidth="15"
+                                      strokeDasharray={strokeDasharray}
+                                      strokeDashoffset={strokeDashoffset}
+                                      className="hover:opacity-80 transition-opacity cursor-pointer"
+                                    />
+                                  );
+                                })}
+                                {/* Then render all text labels on top */}
+                                {topExpenseCategories.map(([category, amount], index) => {
+                                  const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
+                                  
+                                  return percentage > 10 ? (
                                     <text
+                                      key={`text-${category}`}
                                       x={50 + 20 * Math.cos((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)}
                                       y={50 + 20 * Math.sin((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)}
                                       textAnchor="middle"
                                       dominantBaseline="middle"
-                                      className="fill-white"
+                                      fill="black"
                                       style={{ fontSize: '6px', fontWeight: 'bold' }}
                                       transform={`rotate(90 ${50 + 20 * Math.cos((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)} ${50 + 20 * Math.sin((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)})`}
                                     >
                                       {category.length > 8 ? category.substring(0, 8) : category}
                                     </text>
-                                  )}
-                                </g>
-                              );
-                            }) : (
+                                  ) : null;
+                                })}
+                              </>
+                            ) : (
                               <circle
                                 cx="50"
                                 cy="50"
