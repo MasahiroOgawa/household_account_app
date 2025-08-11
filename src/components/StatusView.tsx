@@ -100,7 +100,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
 
                       <div className="flex items-center justify-center mb-2">
                         <div className="relative">
-                          <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 100 100">
+                          <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
                             {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
                               const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
                               const colors = ['#10B981', '#059669', '#047857', '#065F46', '#064E3B', '#022C22'];
@@ -129,7 +129,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                       textAnchor="middle"
                                       dominantBaseline="middle"
                                       className="fill-white"
-                                      style={{ fontSize: '2px', fontWeight: 'bold' }}
+                                      style={{ fontSize: '6px', fontWeight: 'bold' }}
                                       transform={`rotate(90 ${50 + 20 * Math.cos((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)} ${50 + 20 * Math.sin((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)})`}
                                     >
                                       {category.length > 8 ? category.substring(0, 8) : category}
@@ -150,9 +150,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           </svg>
 
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center bg-white rounded-full w-8 h-8 flex flex-col items-center justify-center shadow-lg border border-green-200">
-                              <div className="text-xs font-bold text-green-600">¥{Math.round(totalIncome / 1000)}k</div>
-                              <div className="text-[8px] text-gray-500">Total</div>
+                            <div className="text-center bg-white rounded-full w-10 h-10 flex flex-col items-center justify-center shadow-lg border border-green-200">
+                              <div className="text-sm font-bold text-green-600">¥{Math.round(totalIncome / 1000)}k</div>
+                              <div className="text-xs text-gray-500">Total</div>
                             </div>
                           </div>
                         </div>
@@ -175,7 +175,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
 
                       <div className="flex items-center justify-center mb-2">
                         <div className="relative">
-                          <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 100 100">
+                          <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
                             {topExpenseCategories.length > 0 ? topExpenseCategories.map(([category, amount], index) => {
                               const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
                               const colors = ['#EF4444', '#DC2626', '#B91C1C', '#991B1B', '#7F1D1D', '#450A0A'];
@@ -204,7 +204,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                       textAnchor="middle"
                                       dominantBaseline="middle"
                                       className="fill-white"
-                                      style={{ fontSize: '2px', fontWeight: 'bold' }}
+                                      style={{ fontSize: '6px', fontWeight: 'bold' }}
                                       transform={`rotate(90 ${50 + 20 * Math.cos((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)} ${50 + 20 * Math.sin((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)})`}
                                     >
                                       {category.length > 8 ? category.substring(0, 8) : category}
@@ -226,8 +226,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
 
                           <div className="absolute inset-0 flex items-center justify-center">
                             <div className="text-center bg-white rounded-full w-8 h-8 flex flex-col items-center justify-center shadow-lg border border-red-200">
-                              <div className="text-xs font-bold text-red-600">¥{Math.round(totalExpenses / 1000)}k</div>
-                              <div className="text-[8px] text-gray-500">Total</div>
+                              <div className="text-sm font-bold text-red-600">¥{Math.round(totalExpenses / 1000)}k</div>
+                              <div className="text-xs text-gray-500">Total</div>
                             </div>
                           </div>
                         </div>
