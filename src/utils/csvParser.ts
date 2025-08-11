@@ -42,17 +42,13 @@ class CSVParserState {
       return true;
     }
     
-    // Check for オガワ transfers (common pattern for internal transfers between own accounts)
-    // Note: Japanese text isn't lowercased, so check original text too
-    const originalCombined = (category || '') + ' ' + (description || '');
-    if ((originalCombined.includes('オガワ') || combined.includes('おがわ') || combined.includes('ogawa')) && 
-        (originalCombined.includes('振込') || combined.includes('振込')) && !combined.includes('手数料')) {
-      // Track this name for cross-bank detection
-      if (description) {
-        const namePart = description.replace(/[　\s]+/g, ' ').trim();
-        this.addPersonalTransferName(namePart);
-      }
-      return true; // Internal transfer between own accounts
+    // Check for personal name transfers already tracked
+    // Look for transfers with known personal names
+    const hasPersonalName = Array.from(this.personalTransferNames).some(name => 
+      combined.includes(name)
+    );
+    if (hasPersonalName && combined.includes('振込') && !combined.includes('手数料')) {
+      return true; // Internal transfer to/from known personal account
     }
     
     // Check for simple internal transfers (but exclude legitimate business transactions)
@@ -102,14 +98,16 @@ class CSVParserState {
       return true;
     }
     
-    // Check for オガワ transfers
-    const original = combinedDescription;
-    if ((original.includes('オガワ') || combined.includes('おがわ') || combined.includes('ogawa')) && 
-        (original.includes('振込') || combined.includes('振込')) && !combined.includes('手数料')) {
-      // Track this name
-      const namePart = combinedDescription.replace(/[　\s]+/g, ' ').trim();
-      this.addPersonalTransferName(namePart);
-      return true;
+    // Check for personal name transfers with tracking
+    if (combined.includes('振込') && !combined.includes('手数料')) {
+      // For new transfers, add names to tracking if they look personal (short, no business indicators)
+      if (!combined.includes('会社') && !combined.includes('株式') && 
+          !combined.includes('（カ') && !combined.includes('法人') &&
+          combinedDescription.length < 50) {
+        const namePart = combinedDescription.replace(/[　\s]+/g, ' ').trim();
+        this.addPersonalTransferName(namePart);
+        return true;
+      }
     }
     
     // Check against known personal names
@@ -147,8 +145,9 @@ class CSVParserState {
       return true;
     }
     
-    // Check for オガワ transfers
-    if ((description.includes('オガワ') || desc.includes('おがわ') || desc.includes('ogawa'))) {
+    // Check for personal transfers and track them
+    if (desc.length < 50 && !desc.includes('会社') && !desc.includes('株式') && 
+        !desc.includes('（カ') && !desc.includes('法人')) {
       // Track this name for cross-bank detection
       const namePart = description.replace(/[　\s]+/g, ' ').trim();
       this.addPersonalTransferName(namePart);
