@@ -264,7 +264,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           </svg>
 
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center bg-white rounded-full w-8 h-8 flex flex-col items-center justify-center shadow-lg border border-red-200">
+                            <div className="text-center bg-white rounded-full w-10 h-10 flex flex-col items-center justify-center shadow-lg border border-red-200">
                               <div className="text-sm font-bold text-red-600">¥{Math.round(totalExpenses / 1000)}k</div>
                               <div className="text-xs text-gray-500">Total</div>
                             </div>
