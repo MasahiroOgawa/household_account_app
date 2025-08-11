@@ -2,6 +2,7 @@ import React from 'react';
 import { Transaction } from '../types/Transaction';
 import { Download, TrendingUp, TrendingDown, Calendar, MapPin, Tag, FileText } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { sortTransactionsByDateTime } from '../utils/transactionUtils';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -9,6 +10,31 @@ interface TransactionTableProps {
 }
 
 export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onExport }) => {
+  // Sort transactions by date and time (newest first)
+  const sortedTransactions = sortTransactionsByDateTime(transactions);
+
+  // Group transactions by month
+  const groupedTransactions = sortedTransactions.reduce((groups, transaction) => {
+    try {
+      const parsedDate = parseISO(transaction.date);
+      if (isNaN(parsedDate.getTime())) {
+        console.warn(`Invalid date for transaction ${transaction.id}: ${transaction.date}`);
+        return groups;
+      }
+      const monthKey = format(parsedDate, 'yyyy-MM');
+      if (!groups[monthKey]) {
+        groups[monthKey] = [];
+      }
+      groups[monthKey].push(transaction);
+    } catch (error) {
+      console.warn(`Error processing transaction ${transaction.id}: ${error}`);
+    }
+    return groups;
+  }, {} as Record<string, Transaction[]>);
+
+  // Get sorted month keys (newest first)
+  const sortedMonthKeys = Object.keys(groupedTransactions).sort((a, b) => b.localeCompare(a));
+
   const totalIncome = transactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
@@ -92,55 +118,125 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Category
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Source
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Amount
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {transactions.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {format(parseISO(transaction.date), 'MMM dd, yyyy')}
+            <tbody className="bg-white">
+              {sortedMonthKeys.map((monthKey, monthIndex) => {
+                const monthTransactions = groupedTransactions[monthKey];
+                const monthDate = parseISO(`${monthKey}-01`);
+                
+                // Calculate totals from the actual grouped transactions being displayed
+                const monthIncome = monthTransactions
+                  .filter(t => t.type === 'income')
+                  .reduce((sum, t) => sum + t.amount, 0);
+                const monthExpenses = monthTransactions
+                  .filter(t => t.type === 'expense')
+                  .reduce((sum, t) => sum + t.amount, 0);
+                const monthNet = monthIncome - monthExpenses;
+
+                return (
+                  <React.Fragment key={monthKey}>
+                    {/* Month Header */}
+                    <tr className={`bg-gray-100 ${monthIndex > 0 ? 'border-t-4 border-gray-300' : ''}`}>
+                      <td colSpan={6} className="px-6 py-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Calendar className="w-5 h-5 text-gray-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {format(monthDate, 'MMMM yyyy')}
+                            </h3>
+                            <span className="text-sm text-gray-600">
+                              ({monthTransactions.length} transactions)
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm">
+                            <span className="text-green-700 font-medium">
+                              Income: ¥{monthIncome.toLocaleString()}
+                            </span>
+                            <span className="text-red-700 font-medium">
+                              Expenses: ¥{monthExpenses.toLocaleString()}
+                            </span>
+                            <span className={`font-bold ${monthNet >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                              Net: {monthNet >= 0 ? '+' : ''}¥{monthNet.toLocaleString()}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">{transaction.time}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 max-w-xs truncate" title={transaction.description}>
-                      {transaction.description}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">{transaction.shopName}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <Tag className="w-4 h-4 text-gray-400" />
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        {transaction.category}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                      transaction.type === 'income' 
-                        ? 'bg-secondary-100 text-secondary-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {transaction.type === 'income' ? '+' : '-'}¥{transaction.amount.toLocaleString()}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                      </td>
+                    </tr>
+
+                    {/* Month Transactions */}
+                    {monthTransactions.map((transaction, index) => (
+                      <tr key={transaction.id} className={`hover:bg-gray-50 transition-colors ${index === monthTransactions.length - 1 ? 'border-b-2 border-gray-200' : 'border-b border-gray-100'}`}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {(() => {
+                                  try {
+                                    const parsedDate = parseISO(transaction.date);
+                                    return isNaN(parsedDate.getTime()) 
+                                      ? transaction.date 
+                                      : format(parsedDate, 'MMM dd, yyyy');
+                                  } catch {
+                                    return transaction.date;
+                                  }
+                                })()}
+                              </div>
+                              <div className="text-xs text-gray-500">{transaction.time}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900 max-w-xs truncate" title={transaction.description}>
+                            {transaction.description}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <MapPin className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-900">{transaction.shopName}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <Tag className="w-4 h-4 text-gray-400" />
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {transaction.category}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            transaction.source?.includes('UFJ') ? 'bg-blue-100 text-blue-800' :
+                            transaction.source?.includes('PayPay') ? 'bg-yellow-100 text-yellow-800' :
+                            transaction.source?.includes('Orico') ? 'bg-purple-100 text-purple-800' :
+                            transaction.source?.includes('KAL') ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {transaction.source || 'Unknown'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                            transaction.type === 'income' 
+                              ? 'bg-secondary-100 text-secondary-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {transaction.type === 'income' ? '+' : '-'}¥{transaction.amount.toLocaleString()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

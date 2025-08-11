@@ -7,6 +7,7 @@ export interface Transaction {
   category: string;
   shopName: string;
   type: 'income' | 'expense';
+  source: string; // Source of transaction (UFJ, PayPay, Orico, etc.)
   originalData?: any;
 }
 

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Transaction } from '../types/Transaction';
 import { BarChart3, PieChart } from 'lucide-react';
-import { format, parseISO, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
+import { calculateMonthlyTotals } from '../utils/monthlyCalculations';
 
 interface StatusViewProps {
   transactions: Transaction[];
@@ -49,18 +50,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
 
-    const monthTransactions = transactions.filter(t => {
-      const transactionDate = parseISO(t.date);
-      return transactionDate >= monthStart && transactionDate <= monthEnd;
-    });
-
-    const income = monthTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const expenses = monthTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+    const { income, expenses } = calculateMonthlyTotals(transactions, monthStart, monthEnd);
 
     return {
       month: format(month, 'MMM yyyy'),
@@ -92,7 +82,37 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
           <>
             {/* Calculate max amount for scaling */}
             {(() => {
-              const maxMonthlyAmount = Math.max(...monthlyData.map(d => Math.max(d.income, d.expenses)), 100);
+              const rawMaxAmount = Math.max(...monthlyData.map(d => Math.max(d.income, d.expenses)), 100);
+              
+              // Helper function to create nice round numbers for Y-axis
+              const getNiceRoundMax = (value: number): number => {
+                if (value <= 100000) return 100000; // 100k
+                if (value <= 250000) return 250000; // 250k
+                if (value <= 500000) return 500000; // 0.5M
+                if (value <= 1000000) return 1000000; // 1M
+                if (value <= 1500000) return 1500000; // 1.5M
+                if (value <= 2000000) return 2000000; // 2M
+                if (value <= 2500000) return 2500000; // 2.5M
+                if (value <= 3000000) return 3000000; // 3M
+                if (value <= 5000000) return 5000000; // 5M
+                // For larger amounts, round up to nearest million
+                return Math.ceil(value / 1000000) * 1000000;
+              };
+              
+              const maxMonthlyAmount = getNiceRoundMax(rawMaxAmount);
+              
+              // Helper function to format amounts nicely
+              const formatAmount = (amount: number): string => {
+                if (amount >= 1000000) {
+                  const millions = amount / 1000000;
+                  return millions % 1 === 0 ? `${millions}M` : `${millions.toFixed(1)}M`;
+                } else if (amount >= 1000) {
+                  const thousands = amount / 1000;
+                  return thousands % 1 === 0 ? `${thousands}k` : `${thousands.toFixed(0)}k`;
+                } else {
+                  return amount.toString();
+                }
+              };
 
               return (
                 <>
@@ -110,7 +130,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
 
                       <div className="flex items-center justify-center mb-2">
                         <div className="relative">
-                          <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 100 100">
+                          <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
                             {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
                               const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
                               const colors = ['#10B981', '#059669', '#047857', '#065F46', '#064E3B', '#022C22'];
@@ -138,8 +158,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                       y={50 + 20 * Math.sin((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)}
                                       textAnchor="middle"
                                       dominantBaseline="middle"
-                                      className="fill-white"
-                                      style={{ fontSize: '2px', fontWeight: 'bold' }}
+                                      fill="black"
+                                      style={{ fontSize: '6px', fontWeight: 'bold' }}
                                       transform={`rotate(90 ${50 + 20 * Math.cos((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)} ${50 + 20 * Math.sin((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)})`}
                                     >
                                       {category.length > 8 ? category.substring(0, 8) : category}
@@ -160,9 +180,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           </svg>
 
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center bg-white rounded-full w-8 h-8 flex flex-col items-center justify-center shadow-lg border border-green-200">
-                              <div className="text-xs font-bold text-green-600">¥{Math.round(totalIncome / 1000)}k</div>
-                              <div className="text-[8px] text-gray-500">Total</div>
+                            <div className="text-center bg-white rounded-full w-10 h-10 flex flex-col items-center justify-center shadow-lg border border-green-200">
+                              <div className="text-sm font-bold text-green-600">¥{Math.round(totalIncome / 1000)}k</div>
+                              <div className="text-xs text-gray-500">Total</div>
                             </div>
                           </div>
                         </div>
@@ -185,44 +205,53 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
 
                       <div className="flex items-center justify-center mb-2">
                         <div className="relative">
-                          <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 100 100">
-                            {topExpenseCategories.length > 0 ? topExpenseCategories.map(([category, amount], index) => {
-                              const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
-                              const colors = ['#EF4444', '#DC2626', '#B91C1C', '#991B1B', '#7F1D1D', '#450A0A'];
-                              const circumference = 2 * Math.PI * 15;
-                              const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
-                              const strokeDashoffset = -topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalExpenses) * circumference), 0);
+                          <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                            {/* First render all the pie slices */}
+                            {topExpenseCategories.length > 0 ? (
+                              <>
+                                {topExpenseCategories.map(([category, amount], index) => {
+                                  const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
+                                  const colors = ['#EF4444', '#DC2626', '#B91C1C', '#991B1B', '#7F1D1D', '#450A0A'];
+                                  const circumference = 2 * Math.PI * 15;
+                                  const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
+                                  const strokeDashoffset = -topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalExpenses) * circumference), 0);
 
-                              return (
-                                <g key={category}>
-                                  <circle
-                                    cx="50"
-                                    cy="50"
-                                    r="30"
-                                    fill="transparent"
-                                    stroke={colors[index % colors.length]}
-                                    strokeWidth="15"
-                                    strokeDasharray={strokeDasharray}
-                                    strokeDashoffset={strokeDashoffset}
-                                    className="hover:opacity-80 transition-opacity cursor-pointer"
-                                  />
-                                  {/* Add category text on each segment if it's large enough */}
-                                  {percentage > 10 && (
+                                  return (
+                                    <circle
+                                      key={`slice-${category}`}
+                                      cx="50"
+                                      cy="50"
+                                      r="30"
+                                      fill="transparent"
+                                      stroke={colors[index % colors.length]}
+                                      strokeWidth="15"
+                                      strokeDasharray={strokeDasharray}
+                                      strokeDashoffset={strokeDashoffset}
+                                      className="hover:opacity-80 transition-opacity cursor-pointer"
+                                    />
+                                  );
+                                })}
+                                {/* Then render all text labels on top */}
+                                {topExpenseCategories.map(([category, amount], index) => {
+                                  const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
+                                  
+                                  return percentage > 10 ? (
                                     <text
+                                      key={`text-${category}`}
                                       x={50 + 20 * Math.cos((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)}
                                       y={50 + 20 * Math.sin((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)}
                                       textAnchor="middle"
                                       dominantBaseline="middle"
-                                      className="fill-white"
-                                      style={{ fontSize: '2px', fontWeight: 'bold' }}
+                                      fill="black"
+                                      style={{ fontSize: '6px', fontWeight: 'bold' }}
                                       transform={`rotate(90 ${50 + 20 * Math.cos((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)} ${50 + 20 * Math.sin((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)})`}
                                     >
                                       {category.length > 8 ? category.substring(0, 8) : category}
                                     </text>
-                                  )}
-                                </g>
-                              );
-                            }) : (
+                                  ) : null;
+                                })}
+                              </>
+                            ) : (
                               <circle
                                 cx="50"
                                 cy="50"
@@ -235,9 +264,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           </svg>
 
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center bg-white rounded-full w-8 h-8 flex flex-col items-center justify-center shadow-lg border border-red-200">
-                              <div className="text-xs font-bold text-red-600">¥{Math.round(totalExpenses / 1000)}k</div>
-                              <div className="text-[8px] text-gray-500">Total</div>
+                            <div className="text-center bg-white rounded-full w-10 h-10 flex flex-col items-center justify-center shadow-lg border border-red-200">
+                              <div className="text-sm font-bold text-red-600">¥{Math.round(totalExpenses / 1000)}k</div>
+                              <div className="text-xs text-gray-500">Total</div>
                             </div>
                           </div>
                         </div>
@@ -268,18 +297,20 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         top: '0',
                         height: '400px',
                         width: '80px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
                         fontSize: '12px',
                         color: '#6B7280',
                         paddingRight: '8px'
                       }}>
-                        <div style={{ textAlign: 'right' }}>¥{Math.round(maxMonthlyAmount / 1000)}k</div>
-                        <div style={{ textAlign: 'right' }}>¥{Math.round(maxMonthlyAmount * 0.75 / 1000)}k</div>
-                        <div style={{ textAlign: 'right' }}>¥{Math.round(maxMonthlyAmount * 0.5 / 1000)}k</div>
-                        <div style={{ textAlign: 'right' }}>¥{Math.round(maxMonthlyAmount * 0.25 / 1000)}k</div>
-                        <div style={{ textAlign: 'right' }}>¥0</div>
+                        {/* Top label (100%) */}
+                        <div style={{ textAlign: 'right', position: 'absolute', top: '0px' }}>¥{formatAmount(maxMonthlyAmount)}</div>
+                        {/* 75% label */}
+                        <div style={{ textAlign: 'right', position: 'absolute', top: '100px' }}>¥{formatAmount(maxMonthlyAmount * 0.75)}</div>
+                        {/* 50% label */}
+                        <div style={{ textAlign: 'right', position: 'absolute', top: '200px' }}>¥{formatAmount(maxMonthlyAmount * 0.5)}</div>
+                        {/* 25% label */}
+                        <div style={{ textAlign: 'right', position: 'absolute', top: '300px' }}>¥{formatAmount(maxMonthlyAmount * 0.25)}</div>
+                        {/* Bottom label (0%) - positioned at the very bottom */}
+                        <div style={{ textAlign: 'right', position: 'absolute', bottom: '0px' }}>¥0</div>
                       </div>
 
                       {/* Chart Container */}
@@ -288,91 +319,121 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         borderLeft: '4px solid #6B7280',
                         borderBottom: '4px solid #6B7280',
                         backgroundColor: '#F9FAFB',
-                        borderBottomLeftRadius: '8px'
+                        borderBottomLeftRadius: '8px',
+                        overflow: 'hidden'
                       }}>
+                        {/* Bars Area - bars start from bottom */}
                         <div style={{
                           display: 'flex',
                           alignItems: 'flex-end',
-                          justifyContent: 'space-around',
+                          justifyContent: 'center',
                           height: '400px',
-                          padding: '16px'
+                          padding: '8px 16px 0 16px', // No bottom padding so bars touch bottom
+                          gap: '8px',
+                          overflowX: 'auto',
+                          maxWidth: '100%',
+                          boxSizing: 'border-box'
                         }}>
                           {monthlyData.map((data, index) => {
                             // Calculate bar heights (minimum 8px for visibility)
-                            const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 320, data.income > 0 ? 8 : 4);
-                            const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 320, data.expenses > 0 ? 8 : 4);
+                            const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 392, data.income > 0 ? 8 : 4); // Use full 392px height
+                            const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 392, data.expenses > 0 ? 8 : 4);
 
                             return (
-                              <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                {/* Bar pair container */}
-                                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginBottom: '16px' }}>
-                                  {/* Income Bar - GREEN */}
-                                  <div style={{
-                                    width: '50px',
-                                    height: `${incomeHeight}px`,
-                                    backgroundColor: '#10B981',
-                                    border: '2px solid #059669',
-                                    borderTopLeftRadius: '4px',
-                                    borderTopRightRadius: '4px',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                    cursor: 'pointer',
-                                    transition: 'background-color 0.2s',
-                                    minHeight: '4px',
-                                    display: 'flex',
-                                    alignItems: 'flex-end',
-                                    justifyContent: 'center',
-                                    color: 'white',
-                                    fontSize: '10px',
-                                    fontWeight: 'bold',
-                                    paddingBottom: '4px'
-                                  }}>
-                                    {incomeHeight > 40 && data.income > 0 && `¥${Math.round(data.income / 1000)}k`}
-                                  </div>
-
-                                  {/* Expense Bar - RED */}
-                                  <div style={{
-                                    width: '50px',
-                                    height: `${expenseHeight}px`,
-                                    backgroundColor: '#EF4444',
-                                    border: '2px solid #DC2626',
-                                    borderTopLeftRadius: '4px',
-                                    borderTopRightRadius: '4px',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                    cursor: 'pointer',
-                                    transition: 'background-color 0.2s',
-                                    minHeight: '4px',
-                                    display: 'flex',
-                                    alignItems: 'flex-end',
-                                    justifyContent: 'center',
-                                    color: 'white',
-                                    fontSize: '10px',
-                                    fontWeight: 'bold',
-                                    paddingBottom: '4px'
-                                  }}>
-                                    {expenseHeight > 40 && data.expenses > 0 && `¥${Math.round(data.expenses / 1000)}k`}
-                                  </div>
+                              <div key={index} style={{ 
+                                display: 'flex', 
+                                alignItems: 'flex-end', 
+                                gap: '4px',
+                                padding: '0 4px',
+                                backgroundColor: index % 2 === 0 ? 'rgba(243, 244, 246, 0.3)' : 'transparent',
+                                borderRadius: '6px 6px 0 0', // Only top corners rounded
+                                minWidth: '80px',
+                                flex: '0 0 auto',
+                                height: '100%' // Take full height so bars start from bottom
+                              }}>
+                                {/* Income Bar - GREEN */}
+                                <div style={{
+                                  width: '30px',
+                                  height: `${incomeHeight}px`,
+                                  backgroundColor: '#10B981',
+                                  border: '2px solid #059669',
+                                  borderTopLeftRadius: '6px',
+                                  borderTopRightRadius: '6px',
+                                  boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  minHeight: '4px',
+                                  display: 'flex',
+                                  alignItems: 'flex-end',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontSize: '9px',
+                                  fontWeight: 'bold',
+                                  paddingBottom: '2px'
+                                }}>
+                                  {incomeHeight > 35 && data.income > 0 && `¥${Math.round(data.income / 1000)}k`}
                                 </div>
 
-                                {/* Month label and net amount */}
-                                <div style={{ textAlign: 'center' }}>
-                                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#1F2937', marginBottom: '4px' }}>
-                                    {data.shortMonth}
-                                  </div>
-                                  <div style={{
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    padding: '4px 8px',
-                                    borderRadius: '9999px',
-                                    backgroundColor: (data.income - data.expenses) >= 0 ? '#DCFCE7' : '#FEE2E2',
-                                    color: (data.income - data.expenses) >= 0 ? '#166534' : '#991B1B',
-                                    border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BBF7D0' : '#FECACA'}`
-                                  }}>
-                                    {(data.income - data.expenses) >= 0 ? '+' : ''}¥{(data.income - data.expenses).toLocaleString()}
-                                  </div>
+                                {/* Expense Bar - RED */}
+                                <div style={{
+                                  width: '30px',
+                                  height: `${expenseHeight}px`,
+                                  backgroundColor: '#EF4444',
+                                  border: '2px solid #DC2626',
+                                  borderTopLeftRadius: '6px',
+                                  borderTopRightRadius: '6px',
+                                  boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  minHeight: '4px',
+                                  display: 'flex',
+                                  alignItems: 'flex-end',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontSize: '9px',
+                                  fontWeight: 'bold',
+                                  paddingBottom: '2px'
+                                }}>
+                                  {expenseHeight > 35 && data.expenses > 0 && `¥${Math.round(data.expenses / 1000)}k`}
                                 </div>
                               </div>
                             );
                           })}
+                        </div>
+                        
+                        {/* X-axis labels area - outside the chart */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          padding: '12px 16px',
+                          backgroundColor: '#FFFFFF',
+                          borderTop: '2px solid #E5E7EB'
+                        }}>
+                          {monthlyData.map((data, index) => (
+                            <div key={index} style={{ 
+                              minWidth: '80px',
+                              textAlign: 'center',
+                              flex: '0 0 auto',
+                              padding: '0 4px'
+                            }}>
+                              <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#1F2937', marginBottom: '6px' }}>
+                                {data.shortMonth}
+                              </div>
+                              <div style={{
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                padding: '4px 10px',
+                                borderRadius: '12px',
+                                backgroundColor: (data.income - data.expenses) >= 0 ? '#DCFCE7' : '#FEE2E2',
+                                color: (data.income - data.expenses) >= 0 ? '#166534' : '#991B1B',
+                                border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BBF7D0' : '#FECACA'}`,
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {(data.income - data.expenses) >= 0 ? '+' : ''}¥{Math.abs(data.income - data.expenses).toLocaleString()}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
