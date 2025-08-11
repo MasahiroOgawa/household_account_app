@@ -98,11 +98,15 @@ class CSVParserState {
       return true;
     }
     
-    // Check for personal name transfers with tracking
+    // Check for personal name transfers with tracking (but exclude legitimate business income)
     if (combined.includes('振込') && !combined.includes('手数料')) {
       // For new transfers, add names to tracking if they look personal (short, no business indicators)
       if (!combined.includes('会社') && !combined.includes('株式') && 
           !combined.includes('（カ') && !combined.includes('法人') &&
+          // Exclude salary and legitimate income
+          !combined.includes('給与') && !combined.includes('賞与') && !combined.includes('給料') &&
+          !combined.includes('salary') && !combined.includes('ワイズ') && !combined.includes('ペイメン') &&
+          !combined.includes('証券') && !combined.includes('投資') && !combined.includes('保険') &&
           combinedDescription.length < 50) {
         const namePart = combinedDescription.replace(/[　\s]+/g, ' ').trim();
         this.addPersonalTransferName(namePart);
@@ -145,9 +149,15 @@ class CSVParserState {
       return true;
     }
     
-    // Check for personal transfers and track them
+    // Check for personal transfers and track them (but exclude legitimate business income)
     if (desc.length < 50 && !desc.includes('会社') && !desc.includes('株式') && 
-        !desc.includes('（カ') && !desc.includes('法人')) {
+        !desc.includes('（カ') && !desc.includes('法人') &&
+        // Exclude salary and legitimate income
+        !desc.includes('給与') && !desc.includes('賞与') && !desc.includes('給料') &&
+        !desc.includes('salary') && !desc.includes('ワイズ') && !desc.includes('ペイメン') &&
+        !desc.includes('証券') && !desc.includes('投資') && !desc.includes('保険') &&
+        // Must be a transfer to be considered internal
+        desc.includes('振込')) {
       // Track this name for cross-bank detection
       const namePart = description.replace(/[　\s]+/g, ' ').trim();
       this.addPersonalTransferName(namePart);
