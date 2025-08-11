@@ -11,20 +11,167 @@ const generateUniqueId = (prefix: string): string => {
   )}`;
 };
 
-// Global set to track known account numbers from filenames
-const knownAccountNumbers = new Set<string>();
+// CSV Parser class to encapsulate state and avoid global variables
+class CSVParserState {
+  private knownAccountNumbers = new Set<string>();
+  private personalTransferNames = new Set<string>();
 
-// Helper function to extract and store account number from filename
-const extractAndStoreAccountNumber = (filename: string): string | undefined => {
-  // Extract account number from UFJ filename pattern (e.g., 4614196_20250810131859.csv -> 4614196)
-  const match = filename.match(/^(\d{7})_\d+\.csv$/i);
-  if (match) {
-    const accountNumber = match[1];
-    knownAccountNumbers.add(accountNumber);
-    return accountNumber;
+  extractAndStoreAccountNumber(filename: string): string | undefined {
+    // Extract account number from UFJ filename pattern (e.g., 4614196_20250810131859.csv -> 4614196)
+    const match = filename.match(/^(\d{7})_\d+\.csv$/i);
+    if (match) {
+      const accountNumber = match[1];
+      this.knownAccountNumbers.add(accountNumber);
+      return accountNumber;
+    }
+    return undefined;
   }
-  return undefined;
-};
+
+  addPersonalTransferName(name: string): void {
+    if (name && name.length < 30) {
+      this.personalTransferNames.add(name.toLowerCase());
+    }
+  }
+
+  isUFJInternalTransfer(category: string, description: string): boolean {
+    const combined = ((category || '') + ' ' + (description || '')).toLowerCase();
+    
+    // Check for transfers between known account numbers (but not business transactions)
+    const hasAccountNumberMatch = Array.from(this.knownAccountNumbers).some(accNum => combined.includes(accNum));
+    if (hasAccountNumberMatch && combined.includes('振込') && !combined.includes('手数料')) {
+      return true;
+    }
+    
+    // Check for オガワ transfers (common pattern for internal transfers between own accounts)
+    // Note: Japanese text isn't lowercased, so check original text too
+    const originalCombined = (category || '') + ' ' + (description || '');
+    if ((originalCombined.includes('オガワ') || combined.includes('おがわ') || combined.includes('ogawa')) && 
+        (originalCombined.includes('振込') || combined.includes('振込')) && !combined.includes('手数料')) {
+      // Track this name for cross-bank detection
+      if (description) {
+        const namePart = description.replace(/[　\s]+/g, ' ').trim();
+        this.addPersonalTransferName(namePart);
+      }
+      return true; // Internal transfer between own accounts
+    }
+    
+    // Check for simple internal transfers (but exclude legitimate business transactions)
+    if (combined.includes('振込') && !combined.includes('手数料')) {
+      // Exclude legitimate business/investment transactions
+      if (combined.includes('ラクテン') || combined.includes('rakuten') ||
+          combined.includes('証券') || combined.includes('投資') ||
+          combined.includes('保険') || combined.includes('生命') ||
+          combined.includes('損保') || combined.includes('insurance') ||
+          combined.includes('給与') || combined.includes('salary') ||
+          combined.includes('会社') || combined.includes('株式会社') ||
+          combined.includes('（カ') || combined.includes('（株') ||
+          combined.includes('ワイズ') || combined.includes('ペイメン') ||
+          combined.includes('センシン') || combined.includes('robo')) {
+        return false; // Not an internal transfer - legitimate business transaction
+      }
+      
+      // Check if this matches a known personal transfer name
+      const hasPersonalName = Array.from(this.personalTransferNames).some(name => 
+        combined.includes(name)
+      );
+      if (hasPersonalName) {
+        return true; // Internal transfer to/from known personal account
+      }
+      
+      // If it's a simple transfer with no clear business context, likely internal
+      // This catches personal transfers without hardcoding names
+      const hasBusinessIndicators = combined.includes('株') || combined.includes('会社') || 
+                                   combined.includes('（カ') || combined.includes('（有') ||
+                                   combined.includes('法人') || combined.includes('Co') ||
+                                   combined.includes('Ltd') || combined.includes('Inc');
+      
+      if (!hasBusinessIndicators && combined.length < 50) {
+        return true; // Likely internal transfer
+      }
+    }
+    
+    return false;
+  }
+
+  isSMBCInternalTransfer(combinedDescription: string): boolean {
+    const combined = combinedDescription.toLowerCase();
+    
+    // Check for transfers between known account numbers
+    const hasAccountNumberMatch = Array.from(this.knownAccountNumbers).some(accNum => combined.includes(accNum));
+    if (hasAccountNumberMatch && combined.includes('振込') && !combined.includes('手数料')) {
+      return true;
+    }
+    
+    // Check for オガワ transfers
+    const original = combinedDescription;
+    if ((original.includes('オガワ') || combined.includes('おがわ') || combined.includes('ogawa')) && 
+        (original.includes('振込') || combined.includes('振込')) && !combined.includes('手数料')) {
+      // Track this name
+      const namePart = combinedDescription.replace(/[　\s]+/g, ' ').trim();
+      this.addPersonalTransferName(namePart);
+      return true;
+    }
+    
+    // Check against known personal names
+    const hasPersonalName = Array.from(this.personalTransferNames).some(name => 
+      combined.includes(name)
+    );
+    if (hasPersonalName && combined.includes('振込') && !combined.includes('手数料')) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  isJREInternalTransfer(description: string): boolean {
+    if (!description) return false;
+    const desc = description.toLowerCase();
+    
+    // Check for transfers between known account numbers
+    const hasAccountNumberMatch = Array.from(this.knownAccountNumbers).some(accNum => desc.includes(accNum));
+    if (hasAccountNumberMatch) {
+      return true;
+    }
+    
+    // Check for simple bank transfers (but exclude business transactions)
+    if (desc.includes('三菱ufj銀行') || desc.includes('三菱ｕｆｊ銀行')) {
+      // Exclude legitimate business transactions
+      if (desc.includes('会社') || desc.includes('株式会社') ||
+          desc.includes('（カ') || desc.includes('（株') ||
+          desc.includes('証券') || desc.includes('投資') ||
+          desc.includes('保険') || desc.includes('給与')) {
+        return false; // Not an internal transfer - legitimate business transaction
+      }
+      
+      // Simple personal transfers to UFJ are usually internal
+      return true;
+    }
+    
+    // Check for オガワ transfers
+    if ((description.includes('オガワ') || desc.includes('おがわ') || desc.includes('ogawa'))) {
+      // Track this name for cross-bank detection
+      const namePart = description.replace(/[　\s]+/g, ' ').trim();
+      this.addPersonalTransferName(namePart);
+      return true; // Internal transfer between own accounts
+    }
+    
+    // Check against known personal transfer names
+    const hasPersonalName = Array.from(this.personalTransferNames).some(name => 
+      desc.includes(name)
+    );
+    if (hasPersonalName) {
+      return true; // Internal transfer to/from known personal account
+    }
+    
+    return false;
+  }
+}
+
+// Create a singleton instance for backward compatibility
+const defaultParserState = new CSVParserState();
+
+// Export a function to create a new parser instance for testing
+export const createCSVParser = (): CSVParserState => new CSVParserState();
 
 // Helper functions
 const parseDate = (dateString: string): Date | null => {
@@ -246,69 +393,6 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
   return transactions;
 };
 
-// Track personal names seen in transfers to identify internal transfers
-const personalTransferNames = new Set<string>();
-
-// Helper function to check if a UFJ transaction is an internal transfer
-const isUFJInternalTransfer = (category: string, description: string): boolean => {
-  const combined = ((category || '') + ' ' + (description || '')).toLowerCase();
-  
-  // Check for transfers between known account numbers (but not business transactions)
-  const hasAccountNumberMatch = Array.from(knownAccountNumbers).some(accNum => combined.includes(accNum));
-  if (hasAccountNumberMatch && combined.includes('振込') && !combined.includes('手数料')) {
-    return true;
-  }
-  
-  // Check for オガワ transfers (common pattern for internal transfers between own accounts)
-  // Note: Japanese text isn't lowercased, so check original text too
-  const originalCombined = (category || '') + ' ' + (description || '');
-  if ((originalCombined.includes('オガワ') || combined.includes('おがわ') || combined.includes('ogawa')) && 
-      (originalCombined.includes('振込') || combined.includes('振込')) && !combined.includes('手数料')) {
-    // Track this name for cross-bank detection
-    if (description) {
-      const namePart = description.replace(/[　\s]+/g, ' ').trim();
-      if (namePart.length < 30) personalTransferNames.add(namePart.toLowerCase());
-    }
-    return true; // Internal transfer between own accounts
-  }
-  
-  // Check for simple internal transfers (but exclude legitimate business transactions)
-  if (combined.includes('振込') && !combined.includes('手数料')) {
-    // Exclude legitimate business/investment transactions
-    if (combined.includes('ラクテン') || combined.includes('rakuten') ||
-        combined.includes('証券') || combined.includes('投資') ||
-        combined.includes('保険') || combined.includes('生命') ||
-        combined.includes('損保') || combined.includes('insurance') ||
-        combined.includes('給与') || combined.includes('salary') ||
-        combined.includes('会社') || combined.includes('株式会社') ||
-        combined.includes('（カ') || combined.includes('（株') ||
-        combined.includes('ワイズ') || combined.includes('ペイメン') ||
-        combined.includes('センシン') || combined.includes('robo')) {
-      return false; // Not an internal transfer - legitimate business transaction
-    }
-    
-    // Check if this matches a known personal transfer name
-    const hasPersonalName = Array.from(personalTransferNames).some(name => 
-      combined.includes(name)
-    );
-    if (hasPersonalName) {
-      return true; // Internal transfer to/from known personal account
-    }
-    
-    // If it's a simple transfer with no clear business context, likely internal
-    // This catches personal transfers without hardcoding names
-    const hasBusinessIndicators = combined.includes('株') || combined.includes('会社') || 
-                                 combined.includes('（カ') || combined.includes('（有') ||
-                                 combined.includes('法人') || combined.includes('Co') ||
-                                 combined.includes('Ltd') || combined.includes('Inc');
-    
-    if (!hasBusinessIndicators && combined.length < 50) {
-      return true; // Likely internal transfer
-    }
-  }
-  
-  return false;
-};
 
 // Helper function to check if a UFJ transaction is a transfer fee
 const isUFJTransferFee = (category: string, description: string): boolean => {
@@ -319,7 +403,7 @@ const isUFJTransferFee = (category: string, description: string): boolean => {
 // UFJ CSV parser - handles quoted CSV with thousand separators
 export const parseUFJCSVFile = (data: any[][], filename?: string): Transaction[] => {
   // Extract and store account number from filename
-  const accountNumber = filename ? extractAndStoreAccountNumber(filename) || filename.split('_')[0].replace('.csv', '') : '';
+  const accountNumber = filename ? defaultParserState.extractAndStoreAccountNumber(filename) || filename.split('_')[0].replace('.csv', '') : '';
   const transactions: Transaction[] = [];
   
   // Skip header row and process data
@@ -365,7 +449,7 @@ export const parseUFJCSVFile = (data: any[][], filename?: string): Transaction[]
     if (isNaN(amount) || amount === 0) continue;
     
     // Skip internal transfers unless they are fees
-    if (isUFJInternalTransfer(categoryStr, descriptionStr) && !isUFJTransferFee(categoryStr, descriptionStr)) {
+    if (defaultParserState.isUFJInternalTransfer(categoryStr, descriptionStr) && !isUFJTransferFee(categoryStr, descriptionStr)) {
       continue; // Skip internal transfer
     }
     
@@ -446,7 +530,7 @@ export const parseSMBCCSVFile = (data: any[][]): Transaction[] => {
     // Skip internal transfers unless they are fees
     // For SMBC, need to check category + description together
     const combinedDescription = ((row[1] || '') + ' ' + (descriptionStr || '')).trim();
-    if (isSMBCInternalTransfer(combinedDescription) && !isSMBCTransferFee(combinedDescription)) {
+    if (defaultParserState.isSMBCInternalTransfer(combinedDescription) && !isSMBCTransferFee(combinedDescription)) {
       continue; // Skip internal transfer
     }
     
@@ -478,55 +562,6 @@ export const parseSMBCCSVFile = (data: any[][]): Transaction[] => {
   return transactions;
 };
 
-// Helper function to check if a SMBC transaction is an internal transfer
-const isSMBCInternalTransfer = (description: string): boolean => {
-  if (!description) return false;
-  const desc = description.toLowerCase();
-  
-  // Check for transfers between known account numbers
-  const hasAccountNumberMatch = Array.from(knownAccountNumbers).some(accNum => desc.includes(accNum));
-  if (hasAccountNumberMatch) {
-    return true;
-  }
-  
-  // Check for オガワ transfers (common pattern for internal transfers between own accounts)
-  // Note: Need to check original text too since Japanese isn't lowercased
-  if ((description.includes('オガワ') || desc.includes('おがわ') || desc.includes('ogawa')) && 
-      (description.includes('振込') || desc.includes('振込'))) {
-    // Track this name for cross-bank detection
-    const namePart = description.replace(/[　\s]+/g, ' ').trim();
-    if (namePart.length < 30) personalTransferNames.add(namePart.toLowerCase());
-    return true; // Internal transfer between own accounts
-  }
-  
-  // Check if this matches a known personal transfer name
-  const hasPersonalName = Array.from(personalTransferNames).some(name => 
-    desc.includes(name)
-  );
-  if (hasPersonalName && desc.includes('振込')) {
-    return true; // Internal transfer to/from known personal account
-  }
-  
-  // Check for simple personal transfers (but exclude business transactions)
-  if (desc.includes('振込') && !desc.includes('手数料')) {
-    // Exclude legitimate business/investment transactions
-    if (desc.includes('会社') || desc.includes('株式会社') ||
-        desc.includes('（カ') || desc.includes('（株') ||
-        desc.includes('証券') || desc.includes('投資') ||
-        desc.includes('保険') || desc.includes('給与') ||
-        desc.includes('ワイズ') || desc.includes('ペイメン') ||
-        desc.includes('センシン') || desc.includes('robo')) {
-      return false; // Not an internal transfer - legitimate business transaction
-    }
-    
-    // Simple personal transfers are usually short descriptions
-    if (desc.length < 30 && !desc.includes('会社') && !desc.includes('株')) {
-      return true; // Likely internal transfer
-    }
-  }
-  
-  return false;
-};
 
 // Helper function to check if a SMBC transaction is a transfer fee
 const isSMBCTransferFee = (description: string): boolean => {
@@ -602,33 +637,6 @@ const categorizeSMBCTransaction = (description: string): string => {
   return 'Other';
 };
 
-// Helper function to check if a JRE Bank transaction is an internal transfer
-const isJREInternalTransfer = (description: string): boolean => {
-  if (!description) return false;
-  const desc = description.toLowerCase();
-  
-  // Check for transfers between known account numbers
-  const hasAccountNumberMatch = Array.from(knownAccountNumbers).some(accNum => desc.includes(accNum));
-  if (hasAccountNumberMatch) {
-    return true;
-  }
-  
-  // Check for simple bank transfers (but exclude business transactions)
-  if (desc.includes('三菱ufj銀行') || desc.includes('三菱ｕｆｊ銀行')) {
-    // Exclude legitimate business transactions
-    if (desc.includes('会社') || desc.includes('株式会社') ||
-        desc.includes('（カ') || desc.includes('（株') ||
-        desc.includes('証券') || desc.includes('投資') ||
-        desc.includes('保険') || desc.includes('給与')) {
-      return false; // Not an internal transfer - legitimate business transaction
-    }
-    
-    // Simple personal transfers to UFJ are usually internal
-    return true;
-  }
-  
-  return false;
-};
 
 // Helper function to check if a JRE Bank transaction is a transfer fee
 const isJRETransferFee = (description: string): boolean => {
@@ -673,7 +681,7 @@ export const parseJREBankCSVFile = (data: any[][]): Transaction[] => {
     if (isNaN(amount)) continue;
     
     // Skip internal transfers unless they are fees
-    if (isJREInternalTransfer(descriptionStr) && !isJRETransferFee(descriptionStr)) {
+    if (defaultParserState.isJREInternalTransfer(descriptionStr) && !isJRETransferFee(descriptionStr)) {
       continue; // Skip internal transfer
     }
     
@@ -936,7 +944,7 @@ export const parseCSVFile = (file: File): Promise<Transaction[]> => {
           complete: (results) => {
             try {
               // Extract account number from filename if it's a UFJ file
-              extractAndStoreAccountNumber(file.name);
+              defaultParserState.extractAndStoreAccountNumber(file.name);
               
               const fileType = detectFileType(file.name, results.data as any[][]);
               let transactions: Transaction[] = [];
