@@ -1,7 +1,8 @@
 import React from 'react';
 import { Transaction } from '../types/Transaction';
 import { BarChart3, PieChart } from 'lucide-react';
-import { format, parseISO, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
+import { calculateMonthlyTotals } from '../utils/monthlyCalculations';
 
 interface StatusViewProps {
   transactions: Transaction[];
@@ -49,18 +50,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
 
-    const monthTransactions = transactions.filter(t => {
-      const transactionDate = parseISO(t.date);
-      return transactionDate >= monthStart && transactionDate <= monthEnd;
-    });
-
-    const income = monthTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const expenses = monthTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+    const { income, expenses } = calculateMonthlyTotals(transactions, monthStart, monthEnd);
 
     return {
       month: format(month, 'MMM yyyy'),

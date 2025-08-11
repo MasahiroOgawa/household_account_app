@@ -15,11 +15,20 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
 
   // Group transactions by month
   const groupedTransactions = sortedTransactions.reduce((groups, transaction) => {
-    const monthKey = format(parseISO(transaction.date), 'yyyy-MM');
-    if (!groups[monthKey]) {
-      groups[monthKey] = [];
+    try {
+      const parsedDate = parseISO(transaction.date);
+      if (isNaN(parsedDate.getTime())) {
+        console.warn(`Invalid date for transaction ${transaction.id}: ${transaction.date}`);
+        return groups;
+      }
+      const monthKey = format(parsedDate, 'yyyy-MM');
+      if (!groups[monthKey]) {
+        groups[monthKey] = [];
+      }
+      groups[monthKey].push(transaction);
+    } catch (error) {
+      console.warn(`Error processing transaction ${transaction.id}: ${error}`);
     }
-    groups[monthKey].push(transaction);
     return groups;
   }, {} as Record<string, Transaction[]>);
 
@@ -121,8 +130,14 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
               {sortedMonthKeys.map((monthKey, monthIndex) => {
                 const monthTransactions = groupedTransactions[monthKey];
                 const monthDate = parseISO(`${monthKey}-01`);
-                const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-                const monthExpenses = monthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                
+                // Calculate totals from the actual grouped transactions being displayed
+                const monthIncome = monthTransactions
+                  .filter(t => t.type === 'income')
+                  .reduce((sum, t) => sum + t.amount, 0);
+                const monthExpenses = monthTransactions
+                  .filter(t => t.type === 'expense')
+                  .reduce((sum, t) => sum + t.amount, 0);
                 const monthNet = monthIncome - monthExpenses;
 
                 return (
@@ -163,7 +178,16 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
                             <Calendar className="w-4 h-4 text-gray-400" />
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {format(parseISO(transaction.date), 'MMM dd, yyyy')}
+                                {(() => {
+                                  try {
+                                    const parsedDate = parseISO(transaction.date);
+                                    return isNaN(parsedDate.getTime()) 
+                                      ? transaction.date 
+                                      : format(parsedDate, 'MMM dd, yyyy');
+                                  } catch {
+                                    return transaction.date;
+                                  }
+                                })()}
                               </div>
                               <div className="text-xs text-gray-500">{transaction.time}</div>
                             </div>
