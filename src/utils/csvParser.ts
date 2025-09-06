@@ -1,6 +1,7 @@
 import * as Papa from "papaparse";
 import { Transaction } from "../types/Transaction";
 import { format, parse, isValid } from "date-fns";
+import { mapToNewCategory } from "./categoryMapper";
 
 // Constants for internal transfer detection
 // Max description length for personal transfers - longer descriptions typically indicate business transactions
@@ -416,7 +417,8 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
     if (!isValid(parsedDate) || isNaN(amount)) continue;
     const shopName = extractOricoShopName(merchantStr);
     const description = merchantStr || "PayPay Transaction";
-    const category = categorizeOricoTransaction(merchantStr, shopName);
+    const oldCategory = categorizeOricoTransaction(merchantStr, shopName);
+    const category = mapToNewCategory(oldCategory, description, shopName, Math.abs(amount), "PayPay");
     const transaction: Transaction = {
       id: generateUniqueId("paypay"),
       date: format(parsedDate!, "yyyy-MM-dd"),
@@ -485,9 +487,10 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
 
     const shopName = extractOricoShopName(merchantStr);
     const description = merchantStr || "Orico Transaction";
-    const category = categorizeOricoTransaction(merchantStr, shopName);
+    const oldCategory = categorizeOricoTransaction(merchantStr, shopName);
     const isKAL = row[1] && row[1].includes("KAL");
     const source = isKAL ? "KAL Card" : "Orico Card";
+    const category = mapToNewCategory(oldCategory, description, shopName, Math.abs(amount), source);
 
     const transaction: Transaction = {
       id: generateUniqueId(`orico`),
@@ -588,7 +591,8 @@ export const parseUFJCSVFile = (
 
     // Extract shop name and categorize
     const shopName = descriptionStr || categoryStr || "UFJ Transaction";
-    const category = categorizeUFJTransaction(categoryStr, descriptionStr);
+    const oldCategory = categorizeUFJTransaction(categoryStr, descriptionStr);
+    const category = mapToNewCategory(oldCategory, `${categoryStr || ""} - ${descriptionStr || ""}`.trim(), shopName, Math.abs(amount), accountNumber ? `UFJ Bank (${accountNumber})` : "UFJ Bank");
 
     const transaction: Transaction = {
       id: generateUniqueId("ufj"),
@@ -677,7 +681,8 @@ export const parseSMBCCSVFile = (data: any[][]): Transaction[] => {
 
     // Extract shop name and categorize
     const shopName = extractSMBCShopName(descriptionStr);
-    const category = categorizeSMBCTransaction(descriptionStr);
+    const oldCategory = categorizeSMBCTransaction(descriptionStr);
+    const category = mapToNewCategory(oldCategory, descriptionStr || "", shopName, Math.abs(amount), "SMBC Bank");
 
     const transaction: Transaction = {
       id: generateUniqueId("smbc"),
@@ -843,7 +848,8 @@ export const parseJREBankCSVFile = (data: any[][]): Transaction[] => {
 
     // Extract shop name and categorize
     const shopName = extractJREShopName(descriptionStr);
-    const category = categorizeJRETransaction(descriptionStr);
+    const oldCategory = categorizeJRETransaction(descriptionStr);
+    const category = mapToNewCategory(oldCategory, descriptionStr || "", shopName, Math.abs(amount), "JRE Bank");
 
     const transaction: Transaction = {
       id: generateUniqueId("jre"),

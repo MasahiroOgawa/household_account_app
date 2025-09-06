@@ -3,6 +3,7 @@ import { Transaction } from '../types/Transaction';
 import { Download, TrendingUp, TrendingDown, Calendar, MapPin, Tag, FileText } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
+import { getCategoryColor, getCategoryDisplayName, NewCategory } from '../utils/categoryMapper';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -207,8 +208,15 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
                             <Tag className="w-4 h-4 text-gray-400" />
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                              {transaction.category}
+                            <span 
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                              style={{
+                                backgroundColor: getCategoryColor(transaction.category as NewCategory) + '30',
+                                color: getCategoryColor(transaction.category as NewCategory),
+                                border: `1px solid ${getCategoryColor(transaction.category as NewCategory)}`
+                              }}
+                            >
+                              {getCategoryDisplayName(transaction.category as NewCategory)}
                             </span>
                           </div>
                         </td>

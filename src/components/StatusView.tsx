@@ -3,6 +3,7 @@ import { Transaction } from '../types/Transaction';
 import { BarChart3, PieChart } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
 import { calculateMonthlyTotals } from '../utils/monthlyCalculations';
+import { getCategoryColor, getCategoryDisplayName, NewCategory } from '../utils/categoryMapper';
 
 interface StatusViewProps {
   transactions: Transaction[];
@@ -46,17 +47,39 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
   const twelveMonthsAgo = subMonths(now, 11);
   const months = eachMonthOfInterval({ start: twelveMonthsAgo, end: now });
 
-  const monthlyData = months.map(month => {
+  interface MonthlyDataItem {
+    month: string;
+    shortMonth: string;
+    income: number;
+    expenses: number;
+    categoryBreakdown: Record<string, number>;
+  }
+
+  const monthlyData: MonthlyDataItem[] = months.map(month => {
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
 
     const { income, expenses } = calculateMonthlyTotals(transactions, monthStart, monthEnd);
+    
+    // Calculate category breakdown for this month
+    const monthTransactions = transactions.filter(t => {
+      const tDate = new Date(t.date);
+      return tDate >= monthStart && tDate <= monthEnd;
+    });
+    
+    const monthlyExpenseCategories = monthTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((acc, t) => {
+        acc[t.category] = (acc[t.category] || 0) + t.amount;
+        return acc;
+      }, {} as Record<string, number>);
 
     return {
       month: format(month, 'MMM yyyy'),
       shortMonth: format(month, 'MMM'),
       income,
-      expenses
+      expenses,
+      categoryBreakdown: monthlyExpenseCategories
     };
   });
 
@@ -189,7 +212,23 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       </div>
 
                       <div className="space-y-3 max-h-40 overflow-y-auto">
-                        {/* Hide category list for compact view */}
+                        {/* Income Category Legend */}
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">Income Sources:</p>
+                          <div className="grid grid-cols-1 gap-2 text-xs">
+                            {topIncomeCategories.slice(0, 4).map(([category, amount]) => (
+                              <div key={category} className="flex items-center">
+                                <div 
+                                  className="w-3 h-3 rounded-full mr-2" 
+                                  style={{ backgroundColor: getCategoryColor(category as NewCategory) }}
+                                />
+                                <span className="text-gray-600">
+                                  {getCategoryDisplayName(category as NewCategory)}: ¥{Math.round(amount).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -211,7 +250,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                               <>
                                 {topExpenseCategories.map(([category, amount], index) => {
                                   const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
-                                  const colors = ['#EF4444', '#DC2626', '#B91C1C', '#991B1B', '#7F1D1D', '#450A0A'];
+                                  const categoryColor = getCategoryColor(category as NewCategory);
                                   const circumference = 2 * Math.PI * 15;
                                   const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
                                   const strokeDashoffset = -topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalExpenses) * circumference), 0);
@@ -223,7 +262,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                       cy="50"
                                       r="30"
                                       fill="transparent"
-                                      stroke={colors[index % colors.length]}
+                                      stroke={categoryColor}
                                       strokeWidth="15"
                                       strokeDasharray={strokeDasharray}
                                       strokeDashoffset={strokeDashoffset}
@@ -273,7 +312,26 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       </div>
 
                       <div className="space-y-3 max-h-40 overflow-y-auto">
-                        {/* Hide category list for compact view */}
+                        {/* Expense Category Legend */}
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">Expense Categories:</p>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {topExpenseCategories.slice(0, 6).map(([category, amount]) => (
+                              <div key={category} className="flex items-center">
+                                <div 
+                                  className="w-3 h-3 rounded-full mr-2" 
+                                  style={{ backgroundColor: getCategoryColor(category as NewCategory) }}
+                                />
+                                <span className="text-gray-600">
+                                  {getCategoryDisplayName(category as NewCategory)}: ¥{Math.round(amount).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {topExpenseCategories.length > 6 && (
+                            <p className="text-xs text-gray-500 mt-2">+{topExpenseCategories.length - 6} more categories</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -286,6 +344,16 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         Monthly Income vs Expenses
                       </h3>
                       <p className="text-gray-600">Side-by-side comparison of monthly income and expenses over the last 6 months</p>
+                      <div className="mt-2 flex items-center gap-4 text-xs">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
+                          <span className="text-gray-600">Income</span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-gradient-to-t from-gray-400 to-blue-400 rounded mr-1"></div>
+                          <span className="text-gray-600">Expenses (stacked by category)</span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Bar Chart Container */}
@@ -338,6 +406,15 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                             // Calculate bar heights (minimum 8px for visibility)
                             const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 392, data.income > 0 ? 8 : 4); // Use full 392px height
                             const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 392, data.expenses > 0 ? 8 : 4);
+                            
+                            // Calculate category segments for expense bar
+                            const categorySegments = Object.entries(data.categoryBreakdown || {})
+                              .sort(([, a], [, b]) => (b as number) - (a as number))
+                              .map(([category, amount]) => ({
+                                category,
+                                amount: amount as number,
+                                height: Math.max(((amount as number) / maxMonthlyAmount) * 392, (amount as number) > 0 ? 2 : 0)
+                              }));
 
                             return (
                               <div key={index} style={{ 
@@ -374,27 +451,52 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                   {incomeHeight > 35 && data.income > 0 && `¥${Math.round(data.income / 1000)}k`}
                                 </div>
 
-                                {/* Expense Bar - RED */}
+                                {/* Expense Bar - Stacked by Category */}
                                 <div style={{
                                   width: '30px',
                                   height: `${expenseHeight}px`,
-                                  backgroundColor: '#EF4444',
-                                  border: '2px solid #DC2626',
+                                  border: '2px solid #9CA3AF',
                                   borderTopLeftRadius: '6px',
                                   borderTopRightRadius: '6px',
-                                  boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.3)',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s ease',
                                   minHeight: '4px',
                                   display: 'flex',
-                                  alignItems: 'flex-end',
-                                  justifyContent: 'center',
-                                  color: 'white',
-                                  fontSize: '9px',
-                                  fontWeight: 'bold',
-                                  paddingBottom: '2px'
-                                }}>
-                                  {expenseHeight > 35 && data.expenses > 0 && `¥${Math.round(data.expenses / 1000)}k`}
+                                  flexDirection: 'column-reverse',
+                                  overflow: 'hidden',
+                                  position: 'relative'
+                                }} title={`Expenses: ¥${Math.round(data.expenses).toLocaleString()}`}>
+                                  {/* Stack category segments */}
+                                  {categorySegments.map((segment, segIndex) => (
+                                    <div
+                                      key={segIndex}
+                                      style={{
+                                        width: '100%',
+                                        height: `${segment.height}px`,
+                                        backgroundColor: getCategoryColor(segment.category as NewCategory),
+                                        borderTop: segIndex > 0 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                                        flexShrink: 0
+                                      }}
+                                      title={`${getCategoryDisplayName(segment.category as NewCategory)}: ¥${Math.round(segment.amount).toLocaleString()}`}
+                                    />
+                                  ))}
+                                  {/* Show total on top if there's space */}
+                                  {expenseHeight > 35 && data.expenses > 0 && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      top: '2px',
+                                      left: '0',
+                                      right: '0',
+                                      textAlign: 'center',
+                                      color: 'white',
+                                      fontSize: '9px',
+                                      fontWeight: 'bold',
+                                      textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                                    }}>
+                                      ¥{Math.round(data.expenses / 1000)}k
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
