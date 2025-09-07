@@ -2,12 +2,25 @@ import * as Papa from "papaparse";
 import { Transaction } from "../types/Transaction";
 import { format, parse, isValid } from "date-fns";
 import { mapToNewCategory } from "./categoryMapper";
+import { configLoader } from "./configLoader";
 
 // Constants for internal transfer detection
 // Max description length for personal transfers - longer descriptions typically indicate business transactions
 const MAX_PERSONAL_TRANSFER_LENGTH = 50;
 // Max length for personal names to track - prevents storing very long text as personal names
 const MAX_PERSONAL_NAME_LENGTH = 30;
+
+// Load configurations
+const columnConfig = configLoader.getColumnMapping();
+const categoryConfig = configLoader.getCategoryMapping();
+
+// Helper function to detect category using config
+const detectCategoryFromConfig = (description: string, shopName?: string): string => {
+  const fullText = `${description} ${shopName || ''}`.toLowerCase();
+  
+  // Use configLoader's category detection
+  return configLoader.detectCategory(fullText);
+};
 
 // Unique ID generator using timestamp and counter
 let idCounter = 0;
@@ -418,7 +431,11 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
     const shopName = extractOricoShopName(merchantStr);
     const description = merchantStr || "PayPay Transaction";
     const oldCategory = categorizeOricoTransaction(merchantStr, shopName);
-    const category = mapToNewCategory(oldCategory, description, shopName, Math.abs(amount), "PayPay");
+    // Try config-based detection first, fallback to legacy mapping
+    const configCategory = detectCategoryFromConfig(description, shopName);
+    const category = configCategory !== categoryConfig.defaultCategory 
+      ? configCategory 
+      : mapToNewCategory(oldCategory, description, shopName, Math.abs(amount), "PayPay");
     const transaction: Transaction = {
       id: generateUniqueId("paypay"),
       date: format(parsedDate!, "yyyy-MM-dd"),
@@ -490,7 +507,11 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
     const oldCategory = categorizeOricoTransaction(merchantStr, shopName);
     const isKAL = row[1] && row[1].includes("KAL");
     const source = isKAL ? "KAL Card" : "Orico Card";
-    const category = mapToNewCategory(oldCategory, description, shopName, Math.abs(amount), source);
+    // Try config-based detection first, fallback to legacy mapping
+    const configCategory = detectCategoryFromConfig(description, shopName);
+    const category = configCategory !== categoryConfig.defaultCategory 
+      ? configCategory 
+      : mapToNewCategory(oldCategory, description, shopName, Math.abs(amount), source);
 
     const transaction: Transaction = {
       id: generateUniqueId(`orico`),
@@ -582,9 +603,12 @@ export const parseUFJCSVFile = (
     if (isNaN(amount) || amount === 0) continue;
 
     // Skip internal transfers unless they are fees
+    const fullTextForTransfer = `${categoryStr || ""} ${descriptionStr || ""}`;
     if (
-      defaultParserState.isUFJInternalTransfer(categoryStr, descriptionStr) &&
-      !isUFJTransferFee(categoryStr, descriptionStr)
+      (configLoader.isInternalTransfer(fullTextForTransfer) || 
+       defaultParserState.isUFJInternalTransfer(categoryStr, descriptionStr)) &&
+      !isUFJTransferFee(categoryStr, descriptionStr) &&
+      !configLoader.isFee(fullTextForTransfer)
     ) {
       continue; // Skip internal transfer
     }
@@ -592,7 +616,12 @@ export const parseUFJCSVFile = (
     // Extract shop name and categorize
     const shopName = descriptionStr || categoryStr || "UFJ Transaction";
     const oldCategory = categorizeUFJTransaction(categoryStr, descriptionStr);
-    const category = mapToNewCategory(oldCategory, `${categoryStr || ""} - ${descriptionStr || ""}`.trim(), shopName, Math.abs(amount), accountNumber ? `UFJ Bank (${accountNumber})` : "UFJ Bank");
+    const fullDescription = `${categoryStr || ""} - ${descriptionStr || ""}`.trim();
+    // Try config-based detection first, fallback to legacy mapping
+    const configCategory = detectCategoryFromConfig(fullDescription, shopName);
+    const category = configCategory !== categoryConfig.defaultCategory 
+      ? configCategory 
+      : mapToNewCategory(oldCategory, fullDescription, shopName, Math.abs(amount), accountNumber ? `UFJ Bank (${accountNumber})` : "UFJ Bank");
 
     const transaction: Transaction = {
       id: generateUniqueId("ufj"),
@@ -673,8 +702,10 @@ export const parseSMBCCSVFile = (data: any[][]): Transaction[] => {
       (descriptionStr || "")
     ).trim();
     if (
-      defaultParserState.isSMBCInternalTransfer(combinedDescription) &&
-      !isSMBCTransferFee(combinedDescription)
+      (configLoader.isInternalTransfer(combinedDescription) ||
+       defaultParserState.isSMBCInternalTransfer(combinedDescription)) &&
+      !isSMBCTransferFee(combinedDescription) &&
+      !configLoader.isFee(combinedDescription)
     ) {
       continue; // Skip internal transfer
     }
@@ -682,7 +713,11 @@ export const parseSMBCCSVFile = (data: any[][]): Transaction[] => {
     // Extract shop name and categorize
     const shopName = extractSMBCShopName(descriptionStr);
     const oldCategory = categorizeSMBCTransaction(descriptionStr);
-    const category = mapToNewCategory(oldCategory, descriptionStr || "", shopName, Math.abs(amount), "SMBC Bank");
+    // Try config-based detection first, fallback to legacy mapping
+    const configCategory = detectCategoryFromConfig(descriptionStr || "", shopName);
+    const category = configCategory !== categoryConfig.defaultCategory 
+      ? configCategory 
+      : mapToNewCategory(oldCategory, descriptionStr || "", shopName, Math.abs(amount), "SMBC Bank");
 
     const transaction: Transaction = {
       id: generateUniqueId("smbc"),
@@ -849,7 +884,11 @@ export const parseJREBankCSVFile = (data: any[][]): Transaction[] => {
     // Extract shop name and categorize
     const shopName = extractJREShopName(descriptionStr);
     const oldCategory = categorizeJRETransaction(descriptionStr);
-    const category = mapToNewCategory(oldCategory, descriptionStr || "", shopName, Math.abs(amount), "JRE Bank");
+    // Try config-based detection first, fallback to legacy mapping
+    const configCategory = detectCategoryFromConfig(descriptionStr || "", shopName);
+    const category = configCategory !== categoryConfig.defaultCategory 
+      ? configCategory 
+      : mapToNewCategory(oldCategory, descriptionStr || "", shopName, Math.abs(amount), "JRE Bank");
 
     const transaction: Transaction = {
       id: generateUniqueId("jre"),
@@ -1044,6 +1083,15 @@ const categorizeUFJTransaction = (
 
 // Detect file type from content or filename
 const detectFileType = (filename: string, data: any[][]): string => {
+  // First try using configLoader's detection
+  const headers = data && data.length > 0 ? data[0] : [];
+  const detectedType = configLoader.detectFileType(headers, filename);
+  
+  if (detectedType) {
+    return detectedType;
+  }
+
+  // Fallback to legacy detection for backward compatibility
   const name = filename.toLowerCase();
 
   // Check filename patterns
