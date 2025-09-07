@@ -6,12 +6,12 @@ export const defaultColumnMapping = {
       columns: {
         date: 0,
         description: 1,
-        amount: 9,
+        amount: 8,
         type: "auto"
       },
       encoding: "shift-jis",
       skipRows: 10,
-      dateFormat: "YYYY/MM/DD"
+      dateFormat: "YYYY年MM月DD日"
     },
     
     paypay: {
@@ -20,12 +20,12 @@ export const defaultColumnMapping = {
       columns: {
         date: 0,
         description: 1,
-        amount: 2,
+        amount: 7,
         type: "expense"
       },
       encoding: "utf-8",
-      skipRows: 0,
-      dateFormat: "YYYY/MM/DD HH:mm"
+      skipRows: 1,
+      dateFormat: "YYYY/MM/DD"
     },
     
     ufj: {
@@ -33,12 +33,10 @@ export const defaultColumnMapping = {
       filename: ["3022252_*.csv", "4614196_*.csv"],
       columns: {
         date: 0,
-        description: 1,
-        withdrawal: 2,
-        deposit: 3,
-        balance: 4,
-        notes: 5,
-        unused: 6
+        description: 2,
+        withdrawal: 3,
+        deposit: 4,
+        balance: 5
       },
       encoding: "shift-jis",
       skipRows: 1,
@@ -51,14 +49,13 @@ export const defaultColumnMapping = {
       filename: ["RB-torihikimeisai.csv"],
       columns: {
         date: 0,
-        description: 1,
-        withdrawal: 2,
-        deposit: 3,
-        balance: 4
+        description: 3,
+        amount: 1,
+        balance: 2
       },
       encoding: "shift-jis",
       skipRows: 1,
-      dateFormat: "YYYY.MM.DD"
+      dateFormat: "YYYYMMDD"
     },
     
     smbc: {
@@ -66,9 +63,9 @@ export const defaultColumnMapping = {
       filename: ["meisai.csv"],
       columns: {
         date: 0,
-        description: 1,
-        withdrawal: 2,
-        deposit: 3,
+        description: 3,
+        withdrawal: 1,
+        deposit: 2,
         balance: 4
       },
       encoding: "shift-jis",

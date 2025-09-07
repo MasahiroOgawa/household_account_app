@@ -277,12 +277,43 @@ export const createCSVParser = (): CSVParserState => new CSVParserState();
 // Helper functions
 const parseDate = (dateString: string): Date | null => {
   if (!dateString) return null;
+  
+  // Log what we're trying to parse
+  // console.log(`Attempting to parse date: "${dateString}"`);
+  
+  // Try Japanese date format first (e.g., "2024年11月15日")
   const japaneseMatch = dateString.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
   if (japaneseMatch) {
     const [, year, month, day] = japaneseMatch;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (isValid(date)) return date;
+    if (isValid(date)) {
+      // console.log(`Parsed Japanese date: ${dateString} -> ${date}`);
+      return date;
+    }
   }
+  
+  // Try YYYYMMDD format (for JRE bank)
+  if (/^\d{8}$/.test(dateString)) {
+    const year = dateString.substring(0, 4);
+    const month = dateString.substring(4, 6);
+    const day = dateString.substring(6, 8);
+    const date = new Date(`${year}-${month}-${day}`);
+    if (isValid(date)) {
+      // console.log(`Parsed YYYYMMDD date: ${dateString} -> ${date}`);
+      return date;
+    }
+  }
+  
+  // Try YYYY.MM.DD format
+  if (/^\d{4}\.\d{2}\.\d{2}$/.test(dateString)) {
+    const [year, month, day] = dateString.split('.');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (isValid(date)) {
+      // console.log(`Parsed YYYY.MM.DD date: ${dateString} -> ${date}`);
+      return date;
+    }
+  }
+  
   const formats = [
     "yyyy/MM/dd",
     "yyyy/M/d",
@@ -294,13 +325,22 @@ const parseDate = (dateString: string): Date | null => {
   for (const formatString of formats) {
     try {
       const parsed = parse(dateString, formatString, new Date());
-      if (isValid(parsed)) return parsed;
+      if (isValid(parsed)) {
+        // console.log(`Parsed date with format ${formatString}: ${dateString} -> ${parsed}`);
+        return parsed;
+      }
     } catch (error) {
       continue;
     }
   }
   const nativeDate = new Date(dateString);
-  return isValid(nativeDate) ? nativeDate : null;
+  if (isValid(nativeDate)) {
+    // console.log(`Parsed date natively: ${dateString} -> ${nativeDate}`);
+    return nativeDate;
+  }
+  
+  console.warn(`Failed to parse date: "${dateString}"`);
+  return null;
 };
 
 const extractOricoShopName = (merchantField: string): string => {
@@ -417,13 +457,43 @@ const categorizeOricoTransaction = (
 // PayPay CSV parser
 export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
   const transactions: Transaction[] = [];
-  // let transactionIndex = 0;
-  for (let i = 0; i < data.length; i++) {
+  
+  // Get column mapping from config
+  const paypayConfig = configLoader.getSourceConfig('paypay');
+  if (!paypayConfig || !paypayConfig.columns) {
+    console.error('PayPay column configuration not found');
+    return transactions;
+  }
+
+  const dateCol = paypayConfig.columns.date as number;
+  const descCol = paypayConfig.columns.description as number;
+  const amountCol = paypayConfig.columns.amount as number;
+  const skipRows = paypayConfig.skipRows || 0;
+
+  console.log(`Parsing PayPay CSV: total rows=${data.length}, skipRows=${skipRows}, columns: date=${dateCol}, desc=${descCol}, amount=${amountCol}`);
+  
+  // Check if this is actually a PayPay card (detail) file by looking at headers
+  const header = data[0] || [];
+  const isPayPayCard = header.some((col: any) => col && typeof col === 'string' && col.includes("利用金額"));
+  
+  // Override column mapping for PayPay card files
+  let actualAmountCol = amountCol;
+  let actualSkipRows = skipRows;
+  if (isPayPayCard) {
+    actualAmountCol = 5; // PayPay card has amount in column 5
+    actualSkipRows = 1;  // PayPay card has 1 header row
+    console.log('Detected PayPay card format, using amount column 5');
+  }
+  
+  console.log('First few rows:', data.slice(0, Math.min(5, data.length)));
+
+  for (let i = actualSkipRows; i < data.length; i++) {
     const row = data[i];
-    if (!row || row.length < 3) continue;
-    const dateStr = row[0];
-    const merchantStr = row[1];
-    const amountStr = row[2];
+    if (!row || row.length <= Math.max(dateCol, descCol, actualAmountCol)) continue;
+    
+    const dateStr = row[dateCol];
+    const merchantStr = row[descCol];
+    const amountStr = row[actualAmountCol];
     if (typeof dateStr !== "string" || !dateStr.match(/\d+/)) continue;
     const parsedDate = parseDate(dateStr);
     const amount = parseFloat(amountStr);
@@ -456,9 +526,10 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
     transactions.push(transaction);
     // transactionIndex++;
   }
+  console.log(`PayPay: Parsed ${transactions.length} transactions from ${data.length} rows`);
   if (transactions.length === 0) {
     console.warn(
-      "No valid transactions found. First 5 rows:",
+      "No valid PayPay transactions found. First 5 rows:",
       data.slice(0, 5)
     );
   }
@@ -468,39 +539,46 @@ export const parsePayPayCSVFile = (data: any[][]): Transaction[] => {
 // Orico/Detail CSV parser
 export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
   const transactions: Transaction[] = [];
-  // let transactionIndex = 0;
+  
+  // Get column mapping from config
+  const oricoConfig = configLoader.getSourceConfig('orico');
+  if (!oricoConfig || !oricoConfig.columns) {
+    console.error('Orico column configuration not found');
+    return transactions;
+  }
 
-  // Check if this is the new Orico format by looking at headers
-  const header = data[0] || [];
-  const isNewOricoFormat = header.some((col) => col && col.includes("利用日"));
+  const dateCol = oricoConfig.columns.date as number;
+  const descCol = oricoConfig.columns.description as number;
+  const amountCol = oricoConfig.columns.amount as number;
+  const skipRows = oricoConfig.skipRows || 1;
 
-  for (let i = 1; i < data.length; i++) {
-    // skip header
+  console.log(`Parsing Orico CSV: total rows=${data.length}, skipRows=${skipRows}, columns: date=${dateCol}, desc=${descCol}, amount=${amountCol}`);
+  console.log('First few rows:', data.slice(0, Math.min(15, data.length)));
+
+  for (let i = skipRows; i < data.length; i++) {
     const row = data[i];
-    if (!row || row.length < 5) continue;
+    if (!row || row.length <= Math.max(dateCol, descCol, amountCol)) continue;
 
-    let dateStr, merchantStr, amountStr;
-
-    if (isNewOricoFormat) {
-      // New Orico format: "利用日/キャンセル日","利用店名・商品名","利用者","決済方法","支払区分","利用金額",...
-      dateStr = row[0];
-      merchantStr = row[1];
-      amountStr = row[5]; // 利用金額
-    } else {
-      // Legacy format
-      dateStr = row[0];
-      merchantStr = row[1];
-      amountStr = row[8] || row[5];
-    }
+    const dateStr = row[dateCol];
+    const merchantStr = row[descCol];
+    let amountStr = row[amountCol];
 
     if (!dateStr || dateStr.trim() === "") continue; // skip rows with empty date
     if (!amountStr) continue;
 
-    // Clean up amount: remove backslash, commas, quotes
-    amountStr = amountStr.replace(/\\|"|,/g, "").trim();
+    // Clean up amount: remove yen symbol, backslash, commas, quotes
+    amountStr = amountStr.replace(/[¥\\",]/g, "").trim();
     const parsedDate = parseDate(dateStr);
     const amount = parseFloat(amountStr);
-    if (!isValid(parsedDate) || isNaN(amount)) continue;
+    
+    if (!isValid(parsedDate)) {
+      console.log(`Orico: Failed to parse date "${dateStr}" at row ${i}`);
+      continue;
+    }
+    if (isNaN(amount)) {
+      console.log(`Orico: Failed to parse amount "${amountStr}" at row ${i}`);
+      continue;
+    }
 
     const shopName = extractOricoShopName(merchantStr);
     const description = merchantStr || "Orico Transaction";
@@ -533,6 +611,7 @@ export const parseOricoDetailCSVFile = (data: any[][]): Transaction[] => {
     transactions.push(transaction);
     // transactionIndex++;
   }
+  console.log(`Orico: Parsed ${transactions.length} transactions from ${data.length} rows`);
   if (transactions.length === 0) {
     console.warn(
       "No valid transactions found in Orico/Detail CSV. First 5 rows:",
@@ -553,6 +632,20 @@ export const parseUFJCSVFile = (
   data: any[][],
   filename?: string
 ): Transaction[] => {
+  // Get column mapping from config
+  const ufjConfig = configLoader.getSourceConfig('ufj');
+  if (!ufjConfig || !ufjConfig.columns) {
+    console.error('UFJ column configuration not found');
+    return [];
+  }
+
+  const dateCol = ufjConfig.columns.date as number;
+  const descCol = ufjConfig.columns.description as number;
+  const withdrawalCol = ufjConfig.columns.withdrawal as number;
+  const depositCol = ufjConfig.columns.deposit as number;
+  const balanceCol = ufjConfig.columns.balance as number;
+  const skipRows = ufjConfig.skipRows || 1;
+
   // Extract and store account number from filename
   const accountNumber = filename
     ? defaultParserState.extractAndStoreAccountNumber(filename) ||
@@ -560,17 +653,16 @@ export const parseUFJCSVFile = (
     : "";
   const transactions: Transaction[] = [];
 
-  // Skip header row and process data
-  for (let i = 1; i < data.length; i++) {
+  // Process data using configured column indices
+  for (let i = skipRows; i < data.length; i++) {
     const row = data[i];
-    if (!row || row.length < 6) continue;
+    if (!row || row.length <= Math.max(dateCol, descCol, withdrawalCol, depositCol)) continue;
 
-    const dateStr = row[0]; // Date column
-    const categoryStr = row[1]; // Category/Type
-    const descriptionStr = row[2]; // Description/Merchant
-    const withdrawalStr = row[3]; // Withdrawal amount
-    const depositStr = row[4]; // Deposit amount
-    // const balanceStr = row[5]; // Balance (not used currently)
+    const dateStr = row[dateCol]; // Date column
+    const descriptionStr = row[descCol]; // Description/Merchant
+    const withdrawalStr = row[withdrawalCol]; // Withdrawal amount
+    const depositStr = row[depositCol]; // Deposit amount
+    const categoryStr = ""; // UFJ doesn't have a separate category column
 
     if (!dateStr || dateStr.trim() === "") continue;
 
@@ -651,19 +743,28 @@ export const parseUFJCSVFile = (
 export const parseSMBCCSVFile = (data: any[][]): Transaction[] => {
   const transactions: Transaction[] = [];
 
-  // Skip header row if it exists
-  const startRow =
-    data[0] && data[0][0] && data[0][0].includes("年月日") ? 1 : 0;
+  // Get column mapping from config
+  const smbcConfig = configLoader.getSourceConfig('smbc');
+  if (!smbcConfig || !smbcConfig.columns) {
+    console.error('SMBC column configuration not found');
+    return transactions;
+  }
 
-  for (let i = startRow; i < data.length; i++) {
+  const dateCol = smbcConfig.columns.date as number;
+  const withdrawalCol = smbcConfig.columns.withdrawal as number;
+  const depositCol = smbcConfig.columns.deposit as number;
+  const descCol = smbcConfig.columns.description as number;
+  const balanceCol = smbcConfig.columns.balance as number;
+  const skipRows = smbcConfig.skipRows || 1;
+
+  for (let i = skipRows; i < data.length; i++) {
     const row = data[i];
-    if (!row || row.length < 5) continue;
+    if (!row || row.length <= Math.max(dateCol, withdrawalCol, depositCol, descCol)) continue;
 
-    const dateStr = row[0]; // 年月日
-    const withdrawalStr = row[1]; // お引出し
-    const depositStr = row[2]; // お預入れ
-    const descriptionStr = row[3]; // お取り扱い内容
-    // const balanceStr = row[4]; // 残高 (not used)
+    const dateStr = row[dateCol]; // 年月日
+    const withdrawalStr = row[withdrawalCol]; // お引出し
+    const depositStr = row[depositCol]; // お預入れ
+    const descriptionStr = row[descCol]; // お取り扱い内容
 
     if (!dateStr || dateStr.trim() === "") continue;
 
@@ -837,18 +938,26 @@ const isJRETransferFee = (description: string): boolean => {
 export const parseJREBankCSVFile = (data: any[][]): Transaction[] => {
   const transactions: Transaction[] = [];
 
-  // Skip header row if it exists
-  const startRow =
-    data[0] && data[0][0] && data[0][0].includes("取引日") ? 1 : 0;
+  // Get column mapping from config
+  const jreConfig = configLoader.getSourceConfig('jre');
+  if (!jreConfig || !jreConfig.columns) {
+    console.error('JRE column configuration not found');
+    return transactions;
+  }
 
-  for (let i = startRow; i < data.length; i++) {
+  const dateCol = jreConfig.columns.date as number;
+  const descCol = jreConfig.columns.description as number;
+  const amountCol = jreConfig.columns.amount as number;
+  const balanceCol = jreConfig.columns.balance as number;
+  const skipRows = jreConfig.skipRows || 1;
+
+  for (let i = skipRows; i < data.length; i++) {
     const row = data[i];
-    if (!row || row.length < 4) continue;
+    if (!row || row.length <= Math.max(dateCol, descCol, amountCol)) continue;
 
-    const dateStr = row[0]; // Date in YYYYMMDD format
-    const amountStr = row[1]; // Amount (positive for income, negative for expense)
-    // const balanceStr = row[2]; // Balance after transaction (not used)
-    const descriptionStr = row[3]; // Transaction description
+    const dateStr = row[dateCol]; // Date in YYYYMMDD format
+    const amountStr = row[amountCol]; // Amount (positive for income, negative for expense)
+    const descriptionStr = row[descCol]; // Transaction description
 
     if (!dateStr || dateStr.trim() === "") continue;
 
