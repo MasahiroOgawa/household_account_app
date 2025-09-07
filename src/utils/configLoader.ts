@@ -1,5 +1,5 @@
 import categoryMappingDefault from '../../data/categoryMapping.json';
-import columnMappingDefault from '../../data/columnMapping.json';
+import { defaultColumnMapping } from './defaultColumnMapping';
 
 export interface CategoryMapping {
   mappings: Record<string, string>;
@@ -14,6 +14,7 @@ export interface CategoryMapping {
 export interface ColumnMapping {
   sources: Record<string, {
     name: string;
+    filename?: string[];
     columns: Record<string, number | string>;
     encoding: string;
     skipRows: number;
@@ -68,7 +69,22 @@ class ConfigLoader {
     }
 
     if (!this.columnMapping) {
-      this.columnMapping = columnMappingDefault as ColumnMapping;
+      // Try to load from the JSON file, otherwise use the default
+      try {
+        // Check if columnMapping.json exists in data folder
+        const columnMappingFromFile = localStorage.getItem('columnMappingFromFile');
+        if (columnMappingFromFile) {
+          this.columnMapping = JSON.parse(columnMappingFromFile);
+        } else {
+          // Use default configuration
+          this.columnMapping = defaultColumnMapping as ColumnMapping;
+          // Save it to localStorage for next time
+          this.saveColumnMapping(this.columnMapping);
+        }
+      } catch (e) {
+        // If there's any error, use the default
+        this.columnMapping = defaultColumnMapping as ColumnMapping;
+      }
     }
   }
 
@@ -141,10 +157,32 @@ class ConfigLoader {
     const mapping = this.getColumnMapping();
     const lowerFileName = fileName.toLowerCase();
 
+    // First check against filename patterns in sources
+    for (const [sourceType, config] of Object.entries(mapping.sources)) {
+      if (config.filename) {
+        for (const pattern of config.filename) {
+          // Convert glob pattern to regex
+          const regexPattern = pattern
+            .replace(/\./g, '\\.')
+            .replace(/\*/g, '.*')
+            .replace(/\(/g, '\\(')
+            .replace(/\)/g, '\\)');
+          const regex = new RegExp(regexPattern, 'i');
+          if (regex.test(fileName)) {
+            return sourceType;
+          }
+        }
+      }
+    }
+
+    // Then check detection rules
     for (const [sourceType, rules] of Object.entries(mapping.detectionRules)) {
       // Check filename pattern
-      if (rules.fileNamePattern && lowerFileName.includes(rules.fileNamePattern.toLowerCase())) {
-        return sourceType;
+      if (rules.fileNamePattern) {
+        const regex = new RegExp(rules.fileNamePattern, 'i');
+        if (regex.test(fileName)) {
+          return sourceType;
+        }
       }
 
       // Check header patterns
