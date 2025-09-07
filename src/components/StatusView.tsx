@@ -343,7 +343,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         <BarChart3 className="w-6 h-6 mr-3 text-blue-600" />
                         Monthly Income vs Expenses
                       </h3>
-                      <p className="text-gray-600">Side-by-side comparison of monthly income and expenses over the last 6 months</p>
+                      <p className="text-gray-600">Side-by-side comparison of monthly income and expenses over the last 12 months</p>
                       <div className="mt-2 flex items-center gap-4 text-xs">
                         <div className="flex items-center">
                           <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
@@ -381,27 +381,30 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         <div style={{ textAlign: 'right', position: 'absolute', bottom: '0px' }}>¥0</div>
                       </div>
 
-                      {/* Chart Container */}
+                      {/* Chart Container with scrollable wrapper */}
                       <div style={{
                         marginLeft: '80px',
                         borderLeft: '4px solid #6B7280',
                         borderBottom: '4px solid #6B7280',
                         backgroundColor: '#F9FAFB',
                         borderBottomLeftRadius: '8px',
-                        overflow: 'hidden'
+                        overflowX: 'auto',
+                        maxWidth: '100%'
                       }}>
-                        {/* Bars Area - bars start from bottom */}
+                        {/* Inner container for both bars and labels */}
                         <div style={{
-                          display: 'flex',
-                          alignItems: 'flex-end',
-                          justifyContent: 'center',
-                          height: '400px',
-                          padding: '8px 16px 0 16px', // No bottom padding so bars touch bottom
-                          gap: '8px',
-                          overflowX: 'auto',
-                          maxWidth: '100%',
-                          boxSizing: 'border-box'
+                          minWidth: 'fit-content'
                         }}>
+                          {/* Bars Area - bars start from bottom */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            justifyContent: 'center',
+                            height: '400px',
+                            padding: '8px 16px 0 16px', // No bottom padding so bars touch bottom
+                            gap: '8px',
+                            boxSizing: 'border-box'
+                          }}>
                           {monthlyData.map((data, index) => {
                             // Calculate bar heights (minimum 8px for visibility)
                             const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 392, data.income > 0 ? 8 : 4); // Use full 392px height
@@ -501,41 +504,42 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                               </div>
                             );
                           })}
-                        </div>
-                        
-                        {/* X-axis labels area - outside the chart */}
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          padding: '12px 16px',
-                          backgroundColor: '#FFFFFF',
-                          borderTop: '2px solid #E5E7EB'
-                        }}>
-                          {monthlyData.map((data, index) => (
-                            <div key={index} style={{ 
-                              minWidth: '80px',
-                              textAlign: 'center',
-                              flex: '0 0 auto',
-                              padding: '0 4px'
-                            }}>
-                              <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#1F2937', marginBottom: '6px' }}>
-                                {data.shortMonth}
-                              </div>
-                              <div style={{
-                                fontSize: '11px',
-                                fontWeight: '600',
-                                padding: '4px 10px',
-                                borderRadius: '12px',
-                                backgroundColor: (data.income - data.expenses) >= 0 ? '#DCFCE7' : '#FEE2E2',
-                                color: (data.income - data.expenses) >= 0 ? '#166534' : '#991B1B',
-                                border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BBF7D0' : '#FECACA'}`,
-                                whiteSpace: 'nowrap'
+                          </div>
+                          
+                          {/* X-axis labels area - inside the scrollable container */}
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            padding: '12px 16px',
+                            backgroundColor: '#FFFFFF',
+                            borderTop: '2px solid #E5E7EB'
+                          }}>
+                            {monthlyData.map((data, index) => (
+                              <div key={index} style={{ 
+                                minWidth: '80px',
+                                textAlign: 'center',
+                                flex: '0 0 auto',
+                                padding: '0 4px'
                               }}>
-                                {(data.income - data.expenses) >= 0 ? '+' : ''}¥{Math.abs(data.income - data.expenses).toLocaleString()}
+                                <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#1F2937', marginBottom: '6px' }}>
+                                  {data.shortMonth}
+                                </div>
+                                <div style={{
+                                  fontSize: '11px',
+                                  fontWeight: '600',
+                                  padding: '4px 10px',
+                                  borderRadius: '12px',
+                                  backgroundColor: (data.income - data.expenses) >= 0 ? '#DCFCE7' : '#FEE2E2',
+                                  color: (data.income - data.expenses) >= 0 ? '#166534' : '#991B1B',
+                                  border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BBF7D0' : '#FECACA'}`,
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {(data.income - data.expenses) >= 0 ? '+' : ''}¥{Math.abs(data.income - data.expenses).toLocaleString()}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
