@@ -82,8 +82,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         return (
           <div className="max-w-2xl mx-auto">
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Transaction Files</h2>
-              <p className="text-gray-600">
+              <h2 className="text-2xl font-bold text-black mb-2">Upload Transaction Files</h2>
+              <p className="text-black">
                 Import multiple bank statements, credit card reports at once.
               </p>
             </div>
@@ -99,69 +99,74 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold text-gray-900">Account Book</h1>
-              <span className="text-sm text-gray-500">Welcome, {user.username}</span>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setCurrentView('upload')}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload
-              </button>
-              
-              {transactions.length > 0 && (
-                <button
-                  onClick={() => setCurrentView('main')}
-                  className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
-                    currentView === 'main' 
-                      ? 'bg-green-600 text-white hover:bg-green-700' 
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Transactions
-                </button>
-              )}
-              
-              {transactions.length > 0 && (
-                <button
-                  onClick={() => setCurrentView('status')}
-                  className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
-                    currentView === 'status' 
-                      ? 'bg-purple-600 text-white hover:bg-purple-700' 
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  View Stats
-                </button>
-              )}
-              
-              <button
-                onClick={onLogout}
-                className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </button>
+              <h1 className="text-xl font-semibold text-black">Account Book</h1>
+              <span className="text-sm text-black">Welcome, {user.username}</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {renderContent()}
-      </main>
+      {/* Tab Navigation and Content Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        {/* Tab Headers - All in one row */}
+        <div className="flex space-x-0">
+          <button
+            onClick={() => setCurrentView('upload')}
+            className={`px-6 py-2 text-sm font-medium rounded-t-lg transition-all ${
+              currentView === 'upload'
+                ? 'bg-gray-300 text-black border-2 border-black shadow-[inset_0_-2px_4px_rgba(0,0,0,0.3)] -mb-[2px] relative z-10'
+                : 'bg-gray-200 text-black border-2 border-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.2)] hover:bg-gray-300 hover:shadow-[0_1px_2px_rgba(0,0,0,0.2)] hover:translate-y-[1px]'
+            }`}
+          >
+            Upload
+          </button>
+          
+          {transactions.length > 0 && (
+            <button
+              onClick={() => setCurrentView('main')}
+              className={`px-6 py-2 text-sm font-medium rounded-t-lg transition-all ml-2 ${
+                currentView === 'main'
+                  ? 'bg-gray-300 text-black border-2 border-black shadow-[inset_0_-2px_4px_rgba(0,0,0,0.3)] -mb-[2px] relative z-10'
+                  : 'bg-gray-200 text-black border-2 border-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.2)] hover:bg-gray-300 hover:shadow-[0_1px_2px_rgba(0,0,0,0.2)] hover:translate-y-[1px]'
+              }`}
+            >
+              Transactions
+            </button>
+          )}
+          
+          {transactions.length > 0 && (
+            <button
+              onClick={() => setCurrentView('status')}
+              className={`px-6 py-2 text-sm font-medium rounded-t-lg transition-all ml-2 ${
+                currentView === 'status'
+                  ? 'bg-gray-300 text-black border-2 border-black shadow-[inset_0_-2px_4px_rgba(0,0,0,0.3)] -mb-[2px] relative z-10'
+                  : 'bg-gray-200 text-black border-2 border-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.2)] hover:bg-gray-300 hover:shadow-[0_1px_2px_rgba(0,0,0,0.2)] hover:translate-y-[1px]'
+              }`}
+            >
+              View Stats
+            </button>
+          )}
+          
+          {/* Logout as rightmost tab - next to View Stats */}
+          <button
+            onClick={onLogout}
+            className="px-6 py-2 text-sm font-medium bg-gray-200 text-red-600 border-2 border-gray-400 rounded-t-lg shadow-[0_2px_4px_rgba(0,0,0,0.2)] hover:bg-gray-300 hover:shadow-[0_1px_2px_rgba(0,0,0,0.2)] hover:translate-y-[1px] transition-all ml-2"
+          >
+            Logout
+          </button>
+        </div>
+        
+        {/* Tab Content Container - Complete black border rectangle enclosing everything */}
+        <div className="bg-white" style={{ border: '2px solid black', padding: '32px', minHeight: '600px' }}>
+          {renderContent()}
+        </div>
+      </div>
     </div>
   );
 };

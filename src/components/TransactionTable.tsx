@@ -94,7 +94,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
         </h2>
         <button
           onClick={onExport}
-          className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center px-6 py-3 bg-yellow-200 hover:bg-yellow-300 text-black font-bold rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
         >
           <Download className="w-4 h-4 mr-2" />
           Export CSV
