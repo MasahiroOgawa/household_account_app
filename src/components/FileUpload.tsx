@@ -8,7 +8,6 @@ interface FileUploadProps {
 }
 
 export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading, error }) => {
-  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -16,9 +15,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
     const csvFiles = files.filter(file => file.type === 'text/csv' || file.name.endsWith('.csv'));
     
     if (csvFiles.length > 0) {
-      setSelectedFiles(csvFiles);
+      onFileSelect(csvFiles);
     }
-  }, []);
+  }, [onFileSelect]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -29,28 +28,10 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
     const csvFiles = files.filter(file => file.type === 'text/csv' || file.name.endsWith('.csv'));
     
     if (csvFiles.length > 0) {
-      setSelectedFiles(csvFiles);
+      onFileSelect(csvFiles);
     }
-  }, []);
+  }, [onFileSelect]);
 
-  const removeFile = (indexToRemove: number) => {
-    setSelectedFiles(files => files.filter((_, index) => index !== indexToRemove));
-  };
-
-  const handleUpload = () => {
-    if (selectedFiles.length > 0) {
-      onFileSelect(selectedFiles);
-      setSelectedFiles([]);
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
 
   return (
     <div className="space-y-4">
@@ -93,7 +74,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
             </label>
           </div>
           <p className="text-black text-sm">
-            {selectedFiles.length === 0 ? 'No files selected' : `${selectedFiles.length} file(s) ready to upload`}
+            Select or drag CSV files to upload
           </p>
           <p className="text-black text-xs">
             Drag and drop CSV files here or click the upload button above
@@ -110,45 +91,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
         </div>
       </div>
 
-      {/* Selected Files List */}
-      {selectedFiles.length > 0 && (
-        <div className="bg-white rounded-lg border border-black p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-black">Selected Files ({selectedFiles.length})</h4>
-            <button
-              onClick={handleUpload}
-              disabled={isLoading}
-              className="inline-flex items-center px-6 py-3 bg-yellow-200 hover:bg-yellow-300 text-black font-bold rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Processing...' : 'Upload All Files'}
-            </button>
-          </div>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {selectedFiles.map((file, index) => (
-              <div key={index} className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <FileText className="w-4 h-4 text-black" />
-                  <div>
-                    <p className="text-sm font-medium text-black truncate max-w-xs">
-                      {file.name}
-                    </p>
-                    <p className="text-xs text-black">
-                      {formatFileSize(file.size)}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => removeFile(index)}
-                  className="p-1 text-black hover:text-red-600 transition-colors"
-                  disabled={isLoading}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3">
