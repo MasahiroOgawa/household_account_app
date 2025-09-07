@@ -3,7 +3,7 @@ import { Transaction } from '../types/Transaction';
 import { Download, TrendingUp, TrendingDown, Calendar, MapPin, Tag, FileText } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
-import { getCategoryColor, getCategoryDisplayName, NewCategory } from '../utils/categoryMapper';
+import { getCategoryColor, getCategoryDisplayName, NewCategory } from '../utils/categoryHelpers';
 
 interface TransactionTableProps {
   transactions: Transaction[];

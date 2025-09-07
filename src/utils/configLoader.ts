@@ -1,5 +1,6 @@
 import categoryMappingDefault from '../../data/categoryMapping.json';
 import { defaultColumnMapping } from './defaultColumnMapping';
+import { columnMappingData } from './columnMappingData';
 
 export interface CategoryMapping {
   mappings: Record<string, string>;
@@ -43,49 +44,12 @@ class ConfigLoader {
   }
 
   private loadConfigs() {
-    // Try to load from localStorage first (for user customization)
-    const savedCategoryMapping = localStorage.getItem('categoryMapping');
-    const savedColumnMapping = localStorage.getItem('columnMapping');
-
-    if (savedCategoryMapping) {
-      try {
-        this.categoryMapping = JSON.parse(savedCategoryMapping);
-      } catch (e) {
-        console.warn('Failed to parse saved category mapping, using default');
-      }
-    }
-
-    if (savedColumnMapping) {
-      try {
-        this.columnMapping = JSON.parse(savedColumnMapping);
-      } catch (e) {
-        console.warn('Failed to parse saved column mapping, using default');
-      }
-    }
-
-    // Use default configs if not found in localStorage
-    if (!this.categoryMapping) {
-      this.categoryMapping = categoryMappingDefault as CategoryMapping;
-    }
-
-    if (!this.columnMapping) {
-      // Try to load from the JSON file, otherwise use the default
-      try {
-        // Check if columnMapping.json exists in data folder
-        const columnMappingFromFile = localStorage.getItem('columnMappingFromFile');
-        if (columnMappingFromFile) {
-          this.columnMapping = JSON.parse(columnMappingFromFile);
-        } else {
-          // Use default configuration
-          this.columnMapping = defaultColumnMapping as ColumnMapping;
-          // Save it to localStorage for next time
-          this.saveColumnMapping(this.columnMapping);
-        }
-      } catch (e) {
-        // If there's any error, use the default
-        this.columnMapping = defaultColumnMapping as ColumnMapping;
-      }
-    }
+    // ALWAYS use the hardcoded column mapping data to ensure PayPay and Orico work
+    this.columnMapping = columnMappingData as ColumnMapping;
+    console.log('[ConfigLoader] Using hardcoded column mapping with sources:', Object.keys(this.columnMapping.sources));
+    
+    // Use default category mapping
+    this.categoryMapping = categoryMappingDefault as CategoryMapping;
   }
 
   getCategoryMapping(): CategoryMapping {
@@ -157,6 +121,9 @@ class ConfigLoader {
     const mapping = this.getColumnMapping();
     const lowerFileName = fileName.toLowerCase();
 
+    console.log(`Detecting file type for: ${fileName}`);
+    console.log(`Headers (first 5):`, headers.slice(0, 5));
+
     // First check against filename patterns in sources
     for (const [sourceType, config] of Object.entries(mapping.sources)) {
       if (config.filename) {
@@ -169,6 +136,7 @@ class ConfigLoader {
             .replace(/\)/g, '\\)');
           const regex = new RegExp(regexPattern, 'i');
           if (regex.test(fileName)) {
+            console.log(`Filename matched pattern "${pattern}" for type: ${sourceType}`);
             return sourceType;
           }
         }
@@ -188,9 +156,10 @@ class ConfigLoader {
       // Check header patterns
       if (headers.length > 0 && rules.headerPatterns.length > 0) {
         const headerMatch = rules.headerPatterns.every(pattern => 
-          headers.some(header => header.includes(pattern))
+          headers.some(header => header && header.includes(pattern))
         );
         if (headerMatch) {
+          console.log(`Headers matched patterns for type: ${sourceType}`);
           return sourceType;
         }
       }

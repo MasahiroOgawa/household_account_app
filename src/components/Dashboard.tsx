@@ -3,7 +3,7 @@ import { Transaction, User } from '../types/Transaction';
 import { FileUpload } from './FileUpload';
 import { TransactionTable } from './TransactionTable';
 import { StatusView } from './StatusView';
-import { parseCSVFile } from '../utils/csvParser';
+import { parseCSVFiles } from '../utils/genericCsvParser';
 import { detectAndMergeDuplicates } from '../utils/duplicateDetector';
 import { exportTransactionsToCSV } from '../utils/csvExporter';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
@@ -27,18 +27,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setError(null);
 
     try {
-      const allParsedTransactions: Transaction[] = [];
-      
-      // Process each file sequentially
-      for (const file of files) {
-        try {
-          const parsedTransactions = await parseCSVFile(file);
-          allParsedTransactions.push(...parsedTransactions);
-        } catch (fileError) {
-          console.error(`Error processing file ${file.name}:`, fileError);
-          // Continue processing other files even if one fails
-        }
-      }
+      // Process all files using the generic parser
+      const allParsedTransactions = await parseCSVFiles(files, (current, total) => {
+        console.log(`Processing file ${current} of ${total}`);
+      });
 
       if (allParsedTransactions.length === 0) {
         throw new Error('No valid transactions found in the uploaded files');

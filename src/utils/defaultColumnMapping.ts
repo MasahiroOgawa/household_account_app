@@ -20,7 +20,7 @@ export const defaultColumnMapping = {
       columns: {
         date: 0,
         description: 1,
-        amount: 7,
+        amount: 5,
         type: "expense"
       },
       encoding: "utf-8",
@@ -98,7 +98,7 @@ export const defaultColumnMapping = {
       fileNamePattern: "orico|kal1b"
     },
     paypay: {
-      headerPatterns: ["日時", "サービス", "金額"],
+      headerPatterns: ["利用日", "利用店名", "利用金額"],
       fileNamePattern: "detail.*2156|paypay"
     },
     ufj: {

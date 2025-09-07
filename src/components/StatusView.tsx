@@ -3,7 +3,7 @@ import { Transaction } from '../types/Transaction';
 import { BarChart3, PieChart } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
 import { calculateMonthlyTotals } from '../utils/monthlyCalculations';
-import { getCategoryColor, getCategoryDisplayName, NewCategory } from '../utils/categoryMapper';
+import { getCategoryColor, getCategoryDisplayName, NewCategory } from '../utils/categoryHelpers';
 
 interface StatusViewProps {
   transactions: Transaction[];

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CSV Parser Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <h1>CSV Parser Test</h1>
+    <input type="file" id="fileInput" multiple accept=".csv">
+    <div id="results"></div>
+    
+    <script>
+        // Detection function
+        function detectFileType(headers, fileName) {
+            console.log(`Detecting type for: ${fileName}`);
+            console.log(`Headers:`, headers.slice(0, 5));
+            
+            const lowerFileName = fileName.toLowerCase();
+            
+            // Check PayPay
+            if (fileName.includes('2156')) {
+                console.log('Detected PayPay from filename');
+                return 'paypay';
+            }
+            
+            // Check Orico
+            if (fileName.startsWith('KAL')) {
+                console.log('Detected Orico from filename');
+                return 'orico';
+            }
+            
+            // Check UFJ
+            if (fileName.match(/^\d{7}_/)) {
+                console.log('Detected UFJ from filename');
+                return 'ufj';
+            }
+            
+            return null;
+        }
+        
+        // Parse file
+        async function parseFile(file) {
+            console.log('='.repeat(60));
+            console.log(`Parsing: ${file.name} (${file.size} bytes)`);
+            
+            const fileType = detectFileType([], file.name);
+            console.log(`File type: ${fileType}`);
+            
+            // Determine encoding
+            let encoding = 'UTF-8';
+            if (fileType === 'orico' || fileType === 'ufj') {
+                encoding = 'shift-jis';
+            }
+            console.log(`Using encoding: ${encoding}`);
+            
+            // Read file with proper encoding
+            let content;
+            try {
+                if (encoding === 'shift-jis') {
+                    const buffer = await file.arrayBuffer();
+                    const decoder = new TextDecoder('shift-jis');
+                    content = decoder.decode(buffer);
+                    console.log('Decoded from Shift-JIS');
+                } else {
+                    content = await file.text();
+                    console.log('Read as UTF-8');
+                }
+            } catch (error) {
+                console.error('Error reading file:', error);
+                content = await file.text();
+            }
+            
+            // Parse CSV
+            return new Promise((resolve) => {
+                Papa.parse(content, {
+                    complete: (results) => {
+                        const data = results.data;
+                        console.log(`Parsed ${data.length} rows`);
+                        console.log('First 3 rows:', data.slice(0, 3));
+                        
+                        // Count valid transactions
+                        let validCount = 0;
+                        let skipRows = 1;
+                        
+                        if (fileType === 'orico') skipRows = 10;
+                        if (fileType === 'paypay') skipRows = 1;
+                        if (fileType === 'ufj') skipRows = 1;
+                        
+                        for (let i = skipRows; i < data.length; i++) {
+                            const row = data[i];
+                            if (!row || row.length === 0) continue;
+                            
+                            // Check date column
+                            const dateStr = row[0];
+                            if (!dateStr || dateStr.trim() === '') continue;
+                            
+                            // Check amount
+                            let hasAmount = false;
+                            if (fileType === 'paypay' && row[5]) {
+                                hasAmount = true;
+                            } else if (fileType === 'orico' && row[8]) {
+                                hasAmount = true;
+                            } else if (fileType === 'ufj' && (row[3] || row[4])) {
+                                hasAmount = true;
+                            }
+                            
+                            if (hasAmount) {
+                                validCount++;
+                                if (validCount <= 3) {
+                                    console.log(`Valid row ${i}:`, row.slice(0, 6));
+                                }
+                            }
+                        }
+                        
+                        console.log(`*** Found ${validCount} valid transactions in ${file.name} ***`);
+                        resolve({ file: file.name, type: fileType, count: validCount });
+                    }
+                });
+            });
+        }
+        
+        // Handle file selection
+        document.getElementById('fileInput').addEventListener('change', async (event) => {
+            const files = event.target.files;
+            const results = document.getElementById('results');
+            results.innerHTML = '<h2>Processing...</h2>';
+            
+            let totalCount = 0;
+            let html = '<h2>Results:</h2><ul>';
+            
+            for (const file of files) {
+                try {
+                    const result = await parseFile(file);
+                    totalCount += result.count;
+                    html += `<li>${result.file}: ${result.count} transactions (${result.type})</li>`;
+                } catch (error) {
+                    console.error(`Error with ${file.name}:`, error);
+                    html += `<li>${file.name}: ERROR</li>`;
+                }
+            }
+            
+            html += `</ul><h3>Total: ${totalCount} transactions</h3>`;
+            results.innerHTML = html;
+        });
+    </script>
+</body>
+</html>
