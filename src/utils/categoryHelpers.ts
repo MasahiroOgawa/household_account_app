@@ -54,12 +54,9 @@ export const getCategoryColor = (category: string): string => {
   const info = categoryDisplayInfo[normalizedCategory];
   if (info) return info.color;
 
-  // Handle variations (invest vs investment)
-  if (normalizedCategory === 'invest' && categoryDisplayInfo['investment']) {
-    return categoryDisplayInfo['investment'].color;
-  }
-  if (normalizedCategory === 'investment' && categoryDisplayInfo['invest']) {
-    return categoryDisplayInfo['invest'].color;
+  // Handle variations (invest vs investment) - both use same color now
+  if (normalizedCategory === 'invest' || normalizedCategory === 'investment') {
+    return '#f97316'; // Orange
   }
 
   // Check if this is an income category by checking known income category names
