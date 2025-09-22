@@ -3,15 +3,15 @@ import { columnMappingData } from './columnMappingData';
 
 export interface CategoryMapping {
   mappings: Record<string, string>;
-  defaultCategory: string | { income: string; expense: string };
-  categories: Record<string, {
+  defaultCategory?: string | { income: string; expense: string };
+  categories: {
+    income?: string[] | Record<string, { name: string; color: string }>;
+    expense?: string[] | Record<string, { name: string; color: string }>;
+  } | Record<string, {
     name: string;
     type: 'income' | 'expense' | 'transfer';
     color: string;
-  }> | {
-    income: Record<string, { name: string; color: string }>;
-    expense: Record<string, { name: string; color: string }>;
-  };
+  }>;
 }
 
 export interface ColumnMapping {
@@ -96,12 +96,17 @@ class ConfigLoader {
     }
 
     // Return appropriate default category
-    if (typeof mapping.defaultCategory === 'object') {
-      return transactionType === 'income'
-        ? mapping.defaultCategory.income
-        : mapping.defaultCategory.expense;
+    if (mapping.defaultCategory) {
+      if (typeof mapping.defaultCategory === 'object') {
+        return transactionType === 'income'
+          ? mapping.defaultCategory.income
+          : mapping.defaultCategory.expense;
+      }
+      return mapping.defaultCategory;
     }
-    return mapping.defaultCategory;
+
+    // Final fallback
+    return transactionType === 'income' ? 'others_income' : 'others';
   }
 
   // Helper method to check if a transaction is an internal transfer

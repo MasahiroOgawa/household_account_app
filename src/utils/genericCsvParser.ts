@@ -131,15 +131,15 @@ export const parseGenericCSV = (
   // console.log(`[parseGenericCSV] Skip rows: ${skipRows}, Date format: ${sourceConfig.dateFormat}`);
   // console.log(`[parseGenericCSV] Sample data row ${skipRows}:`, data[skipRows]);
   
-  
+
   let rowsProcessed = 0;
-  let rowsSkipped = 0;
+  // let rowsSkipped = 0;
   
   // Process each row
   for (let i = skipRows; i < data.length; i++) {
     const row = data[i];
     if (!row || row.length === 0) {
-      rowsSkipped++;
+      // rowsSkipped++;
       continue;
     }
     
@@ -150,14 +150,14 @@ export const parseGenericCSV = (
     }
     
     if (!dateStr || dateStr.trim() === '') {
-      rowsSkipped++;
+      // rowsSkipped++;
       continue;
     }
     
     const parsedDate = parseDate(dateStr, sourceConfig.dateFormat);
     if (!parsedDate || !isValid(parsedDate)) {
       // console.log(`[parseGenericCSV] Failed to parse date "${dateStr}" at row ${i}`);
-      rowsSkipped++;
+      // rowsSkipped++;
       continue;
     }
     rowsProcessed++;
@@ -253,7 +253,7 @@ export const parseGenericCSV = (
   }
   
   // console.log(`[parseGenericCSV] ${sourceType}: Parsed ${transactions.length} transactions from ${data.length} rows`);
-  // console.log(`[parseGenericCSV] Rows processed: ${rowsProcessed}, Rows skipped: ${rowsSkipped}`);
+  // console.log(`[parseGenericCSV] Rows processed: ${rowsProcessed}`);
   // console.log(`[parseGenericCSV] First 3 transactions:`, transactions.slice(0, 3).map(t => ({
   //   date: t.date,
   //   amount: t.amount,

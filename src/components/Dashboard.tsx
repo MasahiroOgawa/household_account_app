@@ -7,7 +7,6 @@ import { parseCSVFiles } from '../utils/genericCsvParser';
 import { detectAndMergeDuplicates } from '../utils/duplicateDetector';
 import { exportTransactionsToCSV } from '../utils/csvExporter';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
-import { LogOut } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
