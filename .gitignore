@@ -32,3 +32,11 @@ lerna-debug.log*
 
 # Data files (contains personal financial data)
 data/
+
+# Test scripts (moved to separate directory)
+test-scripts/
+
+# Temporary and backup files
+*.tmp
+*.bak
+*~
