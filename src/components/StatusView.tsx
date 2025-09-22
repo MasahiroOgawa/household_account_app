@@ -30,8 +30,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     }, {} as Record<string, number>);
 
   const topIncomeCategories = Object.entries(incomeCategories)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 6);
+    .sort(([, a], [, b]) => b - a);
 
   // Expense category breakdown
   const expenseCategories = filteredTransactions
@@ -42,8 +41,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     }, {} as Record<string, number>);
 
   const topExpenseCategories = Object.entries(expenseCategories)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 6);
+    .sort(([, a], [, b]) => b - a);
 
   // Monthly breakdown for the previous 12 months
   const now = new Date();
