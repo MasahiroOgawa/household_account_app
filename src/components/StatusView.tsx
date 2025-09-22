@@ -171,7 +171,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
                             {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
                               const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
-                              const categoryColor = getCategoryColor(category as NewCategory);
+                              // Force green colors for income categories
+                              const greenShades = ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#bbf7d0'];
+                              const categoryColor = greenShades[index % greenShades.length];
                               const radius = 30;
                               const circumference = 2 * Math.PI * radius;
                               const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
@@ -218,14 +220,16 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                         <p className="text-xs font-semibold text-gray-700 mb-2">Income Sources:</p>
                         <div className="space-y-1">
-                          {topIncomeCategories.map(([category, amount]) => (
+                          {topIncomeCategories.map(([category, amount], index) => {
+                            const greenShades = ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#bbf7d0'];
+                            return (
                             <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
                               <div
                                 className="flex-shrink-0"
                                 style={{
                                   width: '10px',
                                   height: '10px',
-                                  backgroundColor: getCategoryColor(category as NewCategory),
+                                  backgroundColor: greenShades[index % greenShades.length],
                                   marginRight: '6px',
                                   borderRadius: '2px'
                                 }}
@@ -237,7 +241,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                 ¥{Math.round(amount).toLocaleString()}
                               </span>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -260,7 +265,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                               <>
                                 {topExpenseCategories.map(([category, amount], index) => {
                                   const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
-                                  const categoryColor = getCategoryColor(category as NewCategory);
+                                  // Use non-green colors for expense categories
+                                  const expenseColors = ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#a855f7', '#e11d48', '#7c2d12', '#fbbf24', '#64748b'];
+                                  const categoryColor = expenseColors[index % expenseColors.length];
                                   const radius = 30;
                                   const circumference = 2 * Math.PI * radius;
                                   const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
@@ -308,14 +315,16 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       <div className="mt-4 p-3 bg-gray-50 rounded-lg max-h-48 overflow-y-auto">
                         <p className="text-xs font-semibold text-gray-700 mb-2">Expense Categories:</p>
                         <div className="space-y-1">
-                          {topExpenseCategories.slice(0, 10).map(([category, amount]) => (
+                          {topExpenseCategories.slice(0, 10).map(([category, amount], index) => {
+                            const expenseColors = ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#a855f7', '#e11d48', '#7c2d12', '#fbbf24', '#64748b'];
+                            return (
                             <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
                               <div
                                 className="flex-shrink-0"
                                 style={{
                                   width: '10px',
                                   height: '10px',
-                                  backgroundColor: getCategoryColor(category as NewCategory),
+                                  backgroundColor: expenseColors[index % expenseColors.length],
                                   marginRight: '6px',
                                   borderRadius: '2px'
                                 }}
@@ -327,7 +336,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                 ¥{Math.round(amount).toLocaleString()}
                               </span>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         {topExpenseCategories.length > 10 && (
                           <p className="text-xs text-gray-500 mt-2">+{topExpenseCategories.length - 10} more</p>

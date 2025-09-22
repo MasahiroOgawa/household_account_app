@@ -47,9 +47,21 @@ const categoryDisplayInfo: Record<string, { name: string; color: string; type: '
 
 // Get the color for a category
 export const getCategoryColor = (category: string): string => {
+  // Normalize the category name
+  const normalizedCategory = category.toLowerCase().trim();
+
   // First check our predefined display info
-  const info = categoryDisplayInfo[category.toLowerCase()];
+  const info = categoryDisplayInfo[normalizedCategory];
   if (info) return info.color;
+
+  // Check if this is an income category by checking known income category names
+  const incomeCategories = ['salary', 'company_refund', 'country_refund', 'withdraw', 'other_income'];
+  if (incomeCategories.some(cat => normalizedCategory.includes(cat))) {
+    // Return a green shade for any income category
+    const greenShades = ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#bbf7d0'];
+    const index = incomeCategories.findIndex(cat => normalizedCategory.includes(cat));
+    return greenShades[index] || greenShades[0];
+  }
 
   // Try to get from config (for backward compatibility)
   const categoryConfig = configLoader.getCategoryMapping();
