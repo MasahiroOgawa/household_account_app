@@ -1,34 +1,37 @@
 import { configLoader } from './configLoader';
 
-// Category display names and colors
+// Category display names and colors - more distinct colors
 const categoryDisplayInfo: Record<string, { name: string; color: string; type: 'income' | 'expense' }> = {
-  // Income categories
-  'salary': { name: 'Salary', color: '#10b981', type: 'income' },
-  'company_refund': { name: 'Company Refund', color: '#14b8a6', type: 'income' },
-  'country_refund': { name: 'Country/Tax Refund', color: '#0891b2', type: 'income' },
+  // Income categories - Green shades
+  'salary': { name: 'Salary', color: '#059669', type: 'income' },
+  'company_refund': { name: 'Company Refund', color: '#10b981', type: 'income' },
+  'country_refund': { name: 'Country/Tax Refund', color: '#14b8a6', type: 'income' },
   'withdraw': { name: 'Withdraw', color: '#06b6d4', type: 'income' },
-  'other_income': { name: 'Other Income', color: '#22c55e', type: 'income' },
+  'other_income': { name: 'Other Income', color: '#0891b2', type: 'income' },
 
-  // Expense categories
-  'invest': { name: 'Investment', color: '#3b82f6', type: 'expense' },
-  'education': { name: 'Education', color: '#2563eb', type: 'expense' },
-  'grocery': { name: 'Grocery', color: '#84cc16', type: 'expense' },
-  'wear': { name: 'Clothing/Wear', color: '#ec4899', type: 'expense' },
-  'housing': { name: 'Housing', color: '#ef4444', type: 'expense' },
-  'utility': { name: 'Utility Cost', color: '#f59e0b', type: 'expense' },
-  'medical': { name: 'Medical Expenses', color: '#8b5cf6', type: 'expense' },
-  'leisure': { name: 'Leisure', color: '#a855f7', type: 'expense' },
-  'gift': { name: 'Gift', color: '#f97316', type: 'expense' },
-  'other_expense': { name: 'Other Expense', color: '#94a3b8', type: 'expense' },
+  // Expense categories - Distinct colors for better visibility
+  'invest': { name: 'Investment', color: '#3b82f6', type: 'expense' },          // Blue
+  'education': { name: 'Education', color: '#6366f1', type: 'expense' },        // Indigo
+  'grocery': { name: 'Grocery', color: '#84cc16', type: 'expense' },            // Lime
+  'wear': { name: 'Clothing/Wear', color: '#ec4899', type: 'expense' },         // Pink
+  'housing': { name: 'Housing', color: '#dc2626', type: 'expense' },            // Red
+  'utility': { name: 'Utility Cost', color: '#ea580c', type: 'expense' },       // Orange
+  'medical': { name: 'Medical Expenses', color: '#9333ea', type: 'expense' },   // Purple
+  'leisure': { name: 'Leisure', color: '#f59e0b', type: 'expense' },            // Amber
+  'gift': { name: 'Gift', color: '#e11d48', type: 'expense' },                  // Rose
+  'insurance': { name: 'Insurance', color: '#7c2d12', type: 'expense' },        // Brown
+  'internal_transfer': { name: 'Internal Transfer', color: '#475569', type: 'expense' }, // Slate
+  'transit': { name: 'Transit', color: '#0e7490', type: 'expense' },            // Cyan
+  'tax': { name: 'Tax', color: '#b91c1c', type: 'expense' },                    // Deep Red
+  'other_expense': { name: 'Other Expense', color: '#64748b', type: 'expense' }, // Gray
 
   // Legacy categories (for backward compatibility)
   'groceries': { name: 'Groceries', color: '#84cc16', type: 'expense' },
   'dining': { name: 'Dining', color: '#eab308', type: 'expense' },
-  'transportation': { name: 'Transportation', color: '#06b6d4', type: 'expense' },
+  'transportation': { name: 'Transportation', color: '#0e7490', type: 'expense' },
   'shopping': { name: 'Shopping', color: '#ec4899', type: 'expense' },
-  'healthcare': { name: 'Healthcare', color: '#8b5cf6', type: 'expense' },
-  'insurance': { name: 'Insurance', color: '#6366f1', type: 'expense' },
-  'entertainment': { name: 'Entertainment', color: '#a855f7', type: 'expense' },
+  'healthcare': { name: 'Healthcare', color: '#9333ea', type: 'expense' },
+  'entertainment': { name: 'Entertainment', color: '#f59e0b', type: 'expense' },
   'fitness': { name: 'Fitness', color: '#22c55e', type: 'expense' },
   'fees': { name: 'Fees', color: '#64748b', type: 'expense' },
   'travel': { name: 'Travel', color: '#0ea5e9', type: 'expense' },
@@ -36,10 +39,10 @@ const categoryDisplayInfo: Record<string, { name: string; color: string; type: '
   'personal_care': { name: 'Personal Care', color: '#f97316', type: 'expense' },
   'pets': { name: 'Pets', color: '#fb923c', type: 'expense' },
   'investment': { name: 'Investment', color: '#3b82f6', type: 'expense' },
-  'taxes': { name: 'Taxes', color: '#dc2626', type: 'expense' },
+  'taxes': { name: 'Taxes', color: '#b91c1c', type: 'expense' },
   'pension': { name: 'Pension', color: '#991b1b', type: 'expense' },
-  'other': { name: 'Other', color: '#94a3b8', type: 'expense' },
-  'utilities': { name: 'Utilities', color: '#f59e0b', type: 'expense' },
+  'other': { name: 'Other', color: '#64748b', type: 'expense' },
+  'utilities': { name: 'Utilities', color: '#ea580c', type: 'expense' },
 };
 
 // Get the color for a category

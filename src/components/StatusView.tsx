@@ -10,16 +10,19 @@ interface StatusViewProps {
 }
 
 export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
-  const totalIncome = transactions
+  // Filter out internal_transfer transactions
+  const filteredTransactions = transactions.filter(t => t.category !== 'internal_transfer');
+
+  const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpenses = transactions
+  const totalExpenses = filteredTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
   // Income category breakdown
-  const incomeCategories = transactions
+  const incomeCategories = filteredTransactions
     .filter(t => t.type === 'income')
     .reduce((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
@@ -31,7 +34,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     .slice(0, 6);
 
   // Expense category breakdown
-  const expenseCategories = transactions
+  const expenseCategories = filteredTransactions
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
@@ -59,14 +62,14 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
 
-    const { income, expenses } = calculateMonthlyTotals(transactions, monthStart, monthEnd);
-    
+    const { income, expenses } = calculateMonthlyTotals(filteredTransactions, monthStart, monthEnd);
+
     // Calculate category breakdown for this month
-    const monthTransactions = transactions.filter(t => {
+    const monthTransactions = filteredTransactions.filter(t => {
       const tDate = new Date(t.date);
       return tDate >= monthStart && tDate <= monthEnd;
     });
-    
+
     const monthlyExpenseCategories = monthTransactions
       .filter(t => t.type === 'expense')
       .reduce((acc, t) => {
@@ -90,7 +93,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
         <p className="text-gray-600 mb-8">Visual insights into your income and expense patterns</p>
 
         {/* Show message if no data */}
-        {transactions.length === 0 && (
+        {filteredTransactions.length === 0 && (
           <div className="text-center py-12">
             <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <BarChart3 className="w-8 h-8 text-gray-400" />
@@ -101,7 +104,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
         )}
 
         {/* Only show charts if we have data */}
-        {transactions.length > 0 && (
+        {filteredTransactions.length > 0 && (
           <>
             {/* Calculate max amount for scaling */}
             {(() => {
@@ -215,14 +218,14 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         {/* Income Category Legend */}
                         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                           <p className="text-xs font-semibold text-gray-700 mb-2">Income Sources:</p>
-                          <div className="grid grid-cols-1 gap-2 text-xs">
+                          <div className="space-y-1 text-xs">
                             {topIncomeCategories.slice(0, 4).map(([category, amount]) => (
                               <div key={category} className="flex items-center">
-                                <div 
-                                  className="w-3 h-3 rounded-full mr-2" 
+                                <div
+                                  className="w-3 h-3 rounded mr-2 flex-shrink-0"
                                   style={{ backgroundColor: getCategoryColor(category as NewCategory) }}
                                 />
-                                <span className="text-gray-600">
+                                <span className="text-gray-600 truncate">
                                   {getCategoryDisplayName(category as NewCategory)}: ¥{Math.round(amount).toLocaleString()}
                                 </span>
                               </div>
@@ -315,21 +318,21 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         {/* Expense Category Legend */}
                         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                           <p className="text-xs font-semibold text-gray-700 mb-2">Expense Categories:</p>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {topExpenseCategories.slice(0, 6).map(([category, amount]) => (
+                          <div className="space-y-1 text-xs">
+                            {topExpenseCategories.slice(0, 8).map(([category, amount]) => (
                               <div key={category} className="flex items-center">
-                                <div 
-                                  className="w-3 h-3 rounded-full mr-2" 
+                                <div
+                                  className="w-3 h-3 rounded mr-2 flex-shrink-0"
                                   style={{ backgroundColor: getCategoryColor(category as NewCategory) }}
                                 />
-                                <span className="text-gray-600">
+                                <span className="text-gray-600 truncate">
                                   {getCategoryDisplayName(category as NewCategory)}: ¥{Math.round(amount).toLocaleString()}
                                 </span>
                               </div>
                             ))}
                           </div>
-                          {topExpenseCategories.length > 6 && (
-                            <p className="text-xs text-gray-500 mt-2">+{topExpenseCategories.length - 6} more categories</p>
+                          {topExpenseCategories.length > 8 && (
+                            <p className="text-xs text-gray-500 mt-2">+{topExpenseCategories.length - 8} more categories</p>
                           )}
                         </div>
                       </div>
