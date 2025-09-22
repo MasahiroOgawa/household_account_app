@@ -106,7 +106,7 @@ class ConfigLoader {
     }
 
     // Final fallback
-    return transactionType === 'income' ? 'others_income' : 'others';
+    return transactionType === 'income' ? 'other_income' : 'other_expense';
   }
 
   // Helper method to check if a transaction is an internal transfer

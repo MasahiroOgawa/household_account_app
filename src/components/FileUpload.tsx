@@ -157,8 +157,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
             </h4>
             <p className="text-sm text-gray-600 mb-3">
               Generate a category mapping file from your transaction data. This will analyze ALL unique descriptions
-              and map them to categories. Income: salary, company refund, country refund, withdraw, others.
-              Expenses: invest, education, grocery, wear, housing, utility, medical, leisure, gift, others.
+              and map them to categories. Income: salary, company refund, country refund, withdraw, other income.
+              Expenses: invest, education, grocery, wear, housing, utility, medical, leisure, gift, other expense.
             </p>
             <button
               onClick={handleGenerateCategoryMapping}

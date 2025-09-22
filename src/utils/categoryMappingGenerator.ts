@@ -12,8 +12,8 @@ export interface CategoryMappingStructure {
 
 // Define categories as per user requirements
 const defaultCategories = {
-  income: ['salary', 'company_refund', 'country_refund', 'withdraw', 'others_income'],
-  expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'others']
+  income: ['salary', 'company_refund', 'country_refund', 'withdraw', 'other_income'],
+  expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'other_expense']
 };
 
 // Common patterns for initial categorization - more comprehensive list
@@ -201,24 +201,24 @@ const commonPatterns: { [pattern: string]: string } = {
   '花': 'gift',
 
   // Others - general shopping
-  'Amazon': 'others',
-  'AMAZON': 'others',
-  'アマゾン': 'others',
-  'ｱﾏｿﾞﾝ': 'others',
-  'ヤマダ': 'others',
-  'ﾔﾏﾀﾞ': 'others',
-  'ビックカメラ': 'others',
-  'ﾋﾞｯｸｶﾒﾗ': 'others',
-  'ケーズデンキ': 'others',
-  'ｹｰｽﾞﾃﾞﾝｷ': 'others',
-  'ドンキ': 'others',
-  'ﾄﾞﾝ･ｷﾎｰﾃ': 'others',
-  'ダイソー': 'others',
-  'ﾀﾞｲｿｰ': 'others',
-  'ワッツ': 'others',
-  'ﾜｯﾂ': 'others',
-  'コーナン': 'others',
-  'ｺｰﾅﾝ': 'others',
+  'Amazon': 'other_expense',
+  'AMAZON': 'other_expense',
+  'アマゾン': 'other_expense',
+  'ｱﾏｿﾞﾝ': 'other_expense',
+  'ヤマダ': 'other_expense',
+  'ﾔﾏﾀﾞ': 'other_expense',
+  'ビックカメラ': 'other_expense',
+  'ﾋﾞｯｸｶﾒﾗ': 'other_expense',
+  'ケーズデンキ': 'other_expense',
+  'ｹｰｽﾞﾃﾞﾝｷ': 'other_expense',
+  'ドンキ': 'other_expense',
+  'ﾄﾞﾝ･ｷﾎｰﾃ': 'other_expense',
+  'ダイソー': 'other_expense',
+  'ﾀﾞｲｿｰ': 'other_expense',
+  'ワッツ': 'other_expense',
+  'ﾜｯﾂ': 'other_expense',
+  'コーナン': 'other_expense',
+  'ｺｰﾅﾝ': 'other_expense',
 };
 
 // Analyze transactions to generate mappings with ALL descriptions
@@ -268,14 +268,14 @@ export const analyzeTransactionsForMapping = (transactions: Transaction[]): Cate
           } else if (lowerDesc.includes('atm') || lowerDesc.includes('出金') || lowerDesc.includes('引出')) {
             suggestedCategory = 'withdraw';
           } else {
-            suggestedCategory = 'others_income';
+            suggestedCategory = 'other_income';
           }
         } else {
           // More specific expense detection
           if (lowerDesc.includes('.com') || lowerDesc.includes('ｃｏｍ')) {
             suggestedCategory = 'leisure'; // For Trip.com etc
           } else {
-            suggestedCategory = 'others';
+            suggestedCategory = 'other_expense';
           }
         }
       }

@@ -7,7 +7,7 @@ const categoryDisplayInfo: Record<string, { name: string; color: string; type: '
   'company_refund': { name: 'Company Refund', color: '#14b8a6', type: 'income' },
   'country_refund': { name: 'Country/Tax Refund', color: '#0891b2', type: 'income' },
   'withdraw': { name: 'Withdraw', color: '#06b6d4', type: 'income' },
-  'others_income': { name: 'Other Income', color: '#22c55e', type: 'income' },
+  'other_income': { name: 'Other Income', color: '#22c55e', type: 'income' },
 
   // Expense categories
   'invest': { name: 'Investment', color: '#3b82f6', type: 'expense' },
@@ -19,7 +19,7 @@ const categoryDisplayInfo: Record<string, { name: string; color: string; type: '
   'medical': { name: 'Medical Expenses', color: '#8b5cf6', type: 'expense' },
   'leisure': { name: 'Leisure', color: '#a855f7', type: 'expense' },
   'gift': { name: 'Gift', color: '#f97316', type: 'expense' },
-  'others': { name: 'Others', color: '#94a3b8', type: 'expense' },
+  'other_expense': { name: 'Other Expense', color: '#94a3b8', type: 'expense' },
 
   // Legacy categories (for backward compatibility)
   'groceries': { name: 'Groceries', color: '#84cc16', type: 'expense' },
@@ -112,7 +112,7 @@ export const getCategoryType = (category: string): 'income' | 'expense' | 'trans
   if (info) return info.type;
 
   // Check if it's an income category
-  const incomeCategories = ['salary', 'company_refund', 'country_refund', 'withdraw', 'others_income'];
+  const incomeCategories = ['salary', 'company_refund', 'country_refund', 'withdraw', 'other_income'];
   if (incomeCategories.includes(category.toLowerCase())) return 'income';
 
   // Try to get from config (for backward compatibility)
@@ -141,8 +141,8 @@ export const getCategoryType = (category: string): 'income' | 'expense' | 'trans
 // Get all categories
 export const getAllCategories = (): { income: string[]; expense: string[] } => {
   return {
-    income: ['salary', 'company_refund', 'country_refund', 'withdraw', 'others_income'],
-    expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'others']
+    income: ['salary', 'company_refund', 'country_refund', 'withdraw', 'other_income'],
+    expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'other_expense']
   };
 };
 
