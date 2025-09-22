@@ -2,12 +2,12 @@ import { configLoader } from './configLoader';
 
 // Category display names and colors - more distinct colors
 const categoryDisplayInfo: Record<string, { name: string; color: string; type: 'income' | 'expense' }> = {
-  // Income categories - Green shades for income
-  'salary': { name: 'Salary', color: '#16a34a', type: 'income' },           // Green-600
-  'company_refund': { name: 'Company Refund', color: '#22c55e', type: 'income' }, // Green-500
-  'country_refund': { name: 'Country/Tax Refund', color: '#4ade80', type: 'income' }, // Green-400
-  'withdraw': { name: 'Withdraw', color: '#86efac', type: 'income' },       // Green-300
-  'other_income': { name: 'Other Income', color: '#bbf7d0', type: 'income' }, // Green-200
+  // Income categories - Blue-green spectrum for better distinction
+  'salary': { name: 'Salary', color: '#06b6d4', type: 'income' },           // Cyan-500
+  'company_refund': { name: 'Company Refund', color: '#14b8a6', type: 'income' }, // Teal-500
+  'country_refund': { name: 'Country/Tax Refund', color: '#10b981', type: 'income' }, // Emerald-500
+  'withdraw': { name: 'Withdraw', color: '#22d3ee', type: 'income' },       // Cyan-400
+  'other_income': { name: 'Other Income', color: '#2dd4bf', type: 'income' }, // Teal-400
 
   // Expense categories - Non-green distinct colors
   'invest': { name: 'Investment', color: '#3b82f6', type: 'expense' },          // Blue
@@ -57,10 +57,10 @@ export const getCategoryColor = (category: string): string => {
   // Check if this is an income category by checking known income category names
   const incomeCategories = ['salary', 'company_refund', 'country_refund', 'withdraw', 'other_income'];
   if (incomeCategories.some(cat => normalizedCategory.includes(cat))) {
-    // Return a green shade for any income category
-    const greenShades = ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#bbf7d0'];
+    // Return a blue-green shade for any income category
+    const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf'];
     const index = incomeCategories.findIndex(cat => normalizedCategory.includes(cat));
-    return greenShades[index] || greenShades[0];
+    return blueGreenShades[index] || blueGreenShades[0];
   }
 
   // Try to get from config (for backward compatibility)

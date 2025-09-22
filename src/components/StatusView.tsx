@@ -160,7 +160,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                     <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 flex flex-col items-center justify-center" style={{ width: '25%' }}>
                       <div className="mb-2">
                         <h3 className="text-lg font-semibold text-gray-900 flex items-center mb-1">
-                          <PieChart className="w-5 h-5 mr-2 text-green-600" />
+                          <PieChart className="w-5 h-5 mr-2 text-cyan-600" />
                           Income Categories
                         </h3>
                         <p className="text-gray-600 text-xs">Breakdown of income sources</p>
@@ -171,9 +171,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
                             {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
                               const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
-                              // Force green colors for income categories
-                              const greenShades = ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#bbf7d0'];
-                              const categoryColor = greenShades[index % greenShades.length];
+                              // Use blue-green spectrum for income categories
+                              const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf'];
+                              const categoryColor = blueGreenShades[index % blueGreenShades.length];
                               const radius = 30;
                               const circumference = 2 * Math.PI * radius;
                               const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
@@ -191,8 +191,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                     strokeDasharray={strokeDasharray}
                                     strokeDashoffset={strokeDashoffset}
                                     className="hover:opacity-80 transition-opacity cursor-pointer"
-                                    title={`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount).toLocaleString()} (${percentage.toFixed(1)}%)`}
-                                  />
+                                  >
+                                    <title>{`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount).toLocaleString()} (${percentage.toFixed(1)}%)`}</title>
+                                  </circle>
                                 </g>
                               );
                             }) : (
@@ -208,8 +209,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           </svg>
 
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center bg-white rounded-full w-10 h-10 flex flex-col items-center justify-center shadow-lg border border-green-200">
-                              <div className="text-sm font-bold text-green-600">¥{Math.round(totalIncome / 1000)}k</div>
+                            <div className="text-center bg-white rounded-full w-10 h-10 flex flex-col items-center justify-center shadow-lg border border-cyan-200">
+                              <div className="text-sm font-bold text-cyan-600">¥{Math.round(totalIncome / 1000)}k</div>
                               <div className="text-xs text-gray-500">Total</div>
                             </div>
                           </div>
@@ -221,7 +222,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         <p className="text-xs font-semibold text-gray-700 mb-2">Income Sources:</p>
                         <div className="space-y-1">
                           {topIncomeCategories.map(([category, amount], index) => {
-                            const greenShades = ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#bbf7d0'];
+                            const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf'];
                             return (
                             <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
                               <div
@@ -229,7 +230,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                 style={{
                                   width: '10px',
                                   height: '10px',
-                                  backgroundColor: greenShades[index % greenShades.length],
+                                  backgroundColor: blueGreenShades[index % blueGreenShades.length],
                                   marginRight: '6px',
                                   borderRadius: '2px'
                                 }}
@@ -285,8 +286,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                       strokeDasharray={strokeDasharray}
                                       strokeDashoffset={strokeDashoffset}
                                       className="hover:opacity-80 transition-opacity cursor-pointer"
-                                      title={`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount).toLocaleString()} (${percentage.toFixed(1)}%)`}
-                                    />
+                                    >
+                                      <title>{`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount).toLocaleString()} (${percentage.toFixed(1)}%)`}</title>
+                                    </circle>
                                   );
                                 })}
                               </>
@@ -445,7 +447,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                 <div style={{
                                   width: '30px',
                                   height: `${incomeHeight}px`,
-                                  border: '2px solid #059669',
+                                  border: '2px solid #06b6d4',
                                   borderTopLeftRadius: '6px',
                                   borderTopRightRadius: '6px',
                                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
@@ -460,19 +462,24 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                   {/* Stack income category segments */}
                                   {Object.entries(data.incomeCategoryBreakdown || {})
                                     .sort(([, a], [, b]) => (b as number) - (a as number))
-                                    .map(([category, amount], segIndex) => (
-                                      <div
-                                        key={segIndex}
-                                        style={{
-                                          width: '100%',
-                                          height: `${Math.max(((amount as number) / maxMonthlyAmount) * 392, (amount as number) > 0 ? 2 : 0)}px`,
-                                          backgroundColor: getCategoryColor(category as NewCategory),
-                                          borderTop: segIndex > 0 ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                                          flexShrink: 0
-                                        }}
-                                        title={`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount as number).toLocaleString()}`}
-                                      />
-                                    ))}
+                                    .map(([category, amount], segIndex) => {
+                                      // Use same indexed color approach as pie chart for consistency
+                                      const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf'];
+                                      const categoryColor = blueGreenShades[segIndex % blueGreenShades.length];
+                                      return (
+                                        <div
+                                          key={segIndex}
+                                          style={{
+                                            width: '100%',
+                                            height: `${Math.max(((amount as number) / maxMonthlyAmount) * 392, (amount as number) > 0 ? 2 : 0)}px`,
+                                            backgroundColor: categoryColor,
+                                            borderTop: segIndex > 0 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                                            flexShrink: 0
+                                          }}
+                                          title={`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount as number).toLocaleString()}`}
+                                        />
+                                      );
+                                    })}
                                   {/* Show total on top if there's space */}
                                   {incomeHeight > 35 && data.income > 0 && (
                                     <div style={{
@@ -567,9 +574,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                   fontWeight: '600',
                                   padding: '4px 10px',
                                   borderRadius: '12px',
-                                  backgroundColor: (data.income - data.expenses) >= 0 ? '#DCFCE7' : '#FEE2E2',
-                                  color: (data.income - data.expenses) >= 0 ? '#166534' : '#991B1B',
-                                  border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BBF7D0' : '#FECACA'}`,
+                                  backgroundColor: (data.income - data.expenses) >= 0 ? '#E0F2FE' : '#FEE2E2',
+                                  color: (data.income - data.expenses) >= 0 ? '#0C4A6E' : '#991B1B',
+                                  border: `1px solid ${(data.income - data.expenses) >= 0 ? '#BAE6FD' : '#FECACA'}`,
                                   whiteSpace: 'nowrap'
                                 }}>
                                   {(data.income - data.expenses) >= 0 ? '+' : ''}¥{Math.abs(data.income - data.expenses).toLocaleString()}

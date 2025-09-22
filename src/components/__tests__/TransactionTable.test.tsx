@@ -38,9 +38,6 @@ describe('TransactionTable', () => {
 
       render(<TransactionTable transactions={transactions} onExport={mockOnExport} />);
 
-      // Find May 2024 section
-      const maySection = screen.getByText('May 2024').closest('tr')?.nextElementSibling;
-      
       // Check that May totals are displayed correctly
       // Income: 738747 + 100000 = 838747
       // Expenses: 670430
@@ -59,10 +56,9 @@ describe('TransactionTable', () => {
       render(<TransactionTable transactions={transactions} onExport={mockOnExport} />);
 
       // Check summary cards
-      const totalIncome = 1500000; // 1000000 + 500000
-      const totalExpenses = 1100000; // 800000 + 300000
-      const netAmount = 400000; // 1500000 - 1100000
-
+      // Total income: 1000000 + 500000 = 1500000
+      // Total expenses: 800000 + 300000 = 1100000
+      // Net amount: 1500000 - 1100000 = 400000
       // These should be in the summary cards at the top
       expect(screen.getByText('Total Income')).toBeInTheDocument();
       expect(screen.getByText('¥1,500,000')).toBeInTheDocument();

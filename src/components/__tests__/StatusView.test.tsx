@@ -44,9 +44,6 @@ describe('StatusView', () => {
       // Total income for May: 738747 + 100000 = 838747
       // Total expenses for May: 670430
       
-      // Look for the May bar in the chart
-      const mayBars = container.querySelectorAll('div[style*="May"]');
-      
       // The totals should be consistent throughout the component
       expect(container.textContent).toContain('838'); // Income in thousands
       expect(container.textContent).toContain('670'); // Expenses in thousands
@@ -74,11 +71,9 @@ describe('StatusView', () => {
 
       render(<StatusView transactions={transactions} />);
 
-      // Check that total income and expenses are shown correctly
-      const totalIncome = 1500000; // 1000000 + 500000
-      const totalExpenses = 1100000; // 800000 + 300000
-
       // Legend shows formatted totals
+      // Total income: 1000000 + 500000 = 1500000
+      // Total expenses: 800000 + 300000 = 1100000
       expect(screen.getByText(/Total: ¥1,500,000/)).toBeInTheDocument();
       expect(screen.getByText(/Total: ¥1,100,000/)).toBeInTheDocument();
     });
