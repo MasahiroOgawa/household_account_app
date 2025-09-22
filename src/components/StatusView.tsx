@@ -189,21 +189,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                     strokeDasharray={strokeDasharray}
                                     strokeDashoffset={strokeDashoffset}
                                     className="hover:opacity-80 transition-opacity cursor-pointer"
+                                    title={`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount).toLocaleString()} (${percentage.toFixed(1)}%)`}
                                   />
-                                  {/* Add category text on each segment if it's large enough */}
-                                  {percentage > 10 && (
-                                    <text
-                                      x={50 + 20 * Math.cos((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)}
-                                      y={50 + 20 * Math.sin((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)}
-                                      textAnchor="middle"
-                                      dominantBaseline="middle"
-                                      fill="black"
-                                      style={{ fontSize: '6px', fontWeight: 'bold' }}
-                                      transform={`rotate(90 ${50 + 20 * Math.cos((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)} ${50 + 20 * Math.sin((2 * Math.PI * (topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalIncome), 0) + (amount / totalIncome) / 2)) - Math.PI / 2)})`}
-                                    >
-                                      {category.length > 8 ? category.substring(0, 8) : category}
-                                    </text>
-                                  )}
                                 </g>
                               );
                             }) : (
@@ -291,27 +278,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                       strokeDasharray={strokeDasharray}
                                       strokeDashoffset={strokeDashoffset}
                                       className="hover:opacity-80 transition-opacity cursor-pointer"
+                                      title={`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount).toLocaleString()} (${percentage.toFixed(1)}%)`}
                                     />
                                   );
-                                })}
-                                {/* Then render all text labels on top */}
-                                {topExpenseCategories.map(([category, amount], index) => {
-                                  const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
-                                  
-                                  return percentage > 10 ? (
-                                    <text
-                                      key={`text-${category}`}
-                                      x={50 + 20 * Math.cos((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)}
-                                      y={50 + 20 * Math.sin((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)}
-                                      textAnchor="middle"
-                                      dominantBaseline="middle"
-                                      fill="black"
-                                      style={{ fontSize: '6px', fontWeight: 'bold' }}
-                                      transform={`rotate(90 ${50 + 20 * Math.cos((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)} ${50 + 20 * Math.sin((2 * Math.PI * (topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + (amt / totalExpenses), 0) + (amount / totalExpenses) / 2)) - Math.PI / 2)})`}
-                                    >
-                                      {category.length > 8 ? category.substring(0, 8) : category}
-                                    </text>
-                                  ) : null;
                                 })}
                               </>
                             ) : (

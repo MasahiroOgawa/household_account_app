@@ -2,26 +2,26 @@ import { configLoader } from './configLoader';
 
 // Category display names and colors - more distinct colors
 const categoryDisplayInfo: Record<string, { name: string; color: string; type: 'income' | 'expense' }> = {
-  // Income categories - Blue/Teal/Green shades for income
-  'salary': { name: 'Salary', color: '#0ea5e9', type: 'income' },           // Sky blue
-  'company_refund': { name: 'Company Refund', color: '#06b6d4', type: 'income' }, // Cyan
-  'country_refund': { name: 'Country/Tax Refund', color: '#14b8a6', type: 'income' }, // Teal
-  'withdraw': { name: 'Withdraw', color: '#10b981', type: 'income' },       // Emerald
-  'other_income': { name: 'Other Income', color: '#22c55e', type: 'income' }, // Green
+  // Income categories - Green shades for income
+  'salary': { name: 'Salary', color: '#16a34a', type: 'income' },           // Green-600
+  'company_refund': { name: 'Company Refund', color: '#22c55e', type: 'income' }, // Green-500
+  'country_refund': { name: 'Country/Tax Refund', color: '#4ade80', type: 'income' }, // Green-400
+  'withdraw': { name: 'Withdraw', color: '#86efac', type: 'income' },       // Green-300
+  'other_income': { name: 'Other Income', color: '#bbf7d0', type: 'income' }, // Green-200
 
-  // Expense categories - Distinct colors for better visibility
+  // Expense categories - Non-green distinct colors
   'invest': { name: 'Investment', color: '#3b82f6', type: 'expense' },          // Blue
   'education': { name: 'Education', color: '#8b5cf6', type: 'expense' },        // Violet
-  'grocery': { name: 'Grocery', color: '#84cc16', type: 'expense' },            // Lime
+  'grocery': { name: 'Grocery', color: '#f59e0b', type: 'expense' },            // Amber
   'wear': { name: 'Clothing/Wear', color: '#ec4899', type: 'expense' },         // Pink
   'housing': { name: 'Housing', color: '#ef4444', type: 'expense' },            // Red
   'utility': { name: 'Utility Cost', color: '#f97316', type: 'expense' },       // Orange
   'medical': { name: 'Medical Expenses', color: '#a855f7', type: 'expense' },   // Purple
-  'leisure': { name: 'Leisure', color: '#fbbf24', type: 'expense' },            // Yellow
+  'leisure': { name: 'Leisure', color: '#06b6d4', type: 'expense' },            // Cyan
   'gift': { name: 'Gift', color: '#e11d48', type: 'expense' },                  // Rose
   'insurance': { name: 'Insurance', color: '#7c2d12', type: 'expense' },        // Brown
   'internal_transfer': { name: 'Internal Transfer', color: '#475569', type: 'expense' }, // Slate
-  'transit': { name: 'Transit', color: '#6b7280', type: 'expense' },            // Gray
+  'transit': { name: 'Transit', color: '#fbbf24', type: 'expense' },            // Yellow
   'tax': { name: 'Tax', color: '#dc2626', type: 'expense' },                    // Red-600
   'other_expense': { name: 'Other Expense', color: '#64748b', type: 'expense' }, // Slate-600
 
