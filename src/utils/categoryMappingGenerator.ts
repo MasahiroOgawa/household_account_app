@@ -225,8 +225,6 @@ const commonPatterns: { [pattern: string]: string } = {
 export const analyzeTransactionsForMapping = (transactions: Transaction[]): CategoryMappingStructure => {
   const allDescriptions = new Map<string, { count: number; type: 'income' | 'expense'; suggestedCategory: string }>();
 
-  console.log(`Analyzing ${transactions.length} transactions for category mapping...`);
-
   // Collect ALL unique descriptions from transactions
   transactions.forEach(transaction => {
     // Get the exact description as it appears in the data
@@ -288,8 +286,6 @@ export const analyzeTransactionsForMapping = (transactions: Transaction[]): Cate
     }
   });
 
-  console.log(`Found ${allDescriptions.size} unique descriptions`);
-
   // Build mappings object with ALL descriptions, sorted alphabetically
   const mappings: { [description: string]: string } = {};
 
@@ -302,10 +298,6 @@ export const analyzeTransactionsForMapping = (transactions: Transaction[]): Cate
     const info = allDescriptions.get(description)!;
     mappings[description] = info.suggestedCategory;
   });
-
-  // Log some examples
-  const examples = Object.entries(mappings).slice(0, 5);
-  console.log('Sample mappings:', examples);
 
   return {
     categories: defaultCategories,
@@ -330,13 +322,6 @@ export const generateCategoryMappingFile = (transactions: Transaction[]): void =
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-
-  console.log('Generated category mapping with:', {
-    incomeCategories: mapping.categories.income.length,
-    expenseCategories: mapping.categories.expense.length,
-    mappingsCount: Object.keys(mapping.mappings).length,
-    descriptions: `All ${Object.keys(mapping.mappings).length} unique descriptions mapped`
-  });
 
   // Alert user
   alert(`Category mapping generated successfully!\n\n` +
