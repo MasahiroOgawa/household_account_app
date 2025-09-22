@@ -226,19 +226,23 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       {/* Income Category Legend */}
                       <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                         <p className="text-xs font-semibold text-gray-700 mb-2">Income Sources:</p>
-                        <div className="space-y-1 text-xs">
+                        <div className="space-y-1">
                           {topIncomeCategories.map(([category, amount]) => (
-                            <div key={category} className="flex items-center justify-between">
-                              <div className="flex items-center flex-1">
-                                <div
-                                  className="w-3 h-3 rounded mr-2 flex-shrink-0"
-                                  style={{ backgroundColor: getCategoryColor(category as NewCategory) }}
-                                />
-                                <span className="text-gray-700 font-medium">
-                                  {getCategoryDisplayName(category as NewCategory)}
-                                </span>
-                              </div>
-                              <span className="text-gray-900 font-semibold ml-2">
+                            <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
+                              <div
+                                className="flex-shrink-0"
+                                style={{
+                                  width: '10px',
+                                  height: '10px',
+                                  backgroundColor: getCategoryColor(category as NewCategory),
+                                  marginRight: '6px',
+                                  borderRadius: '2px'
+                                }}
+                              />
+                              <span className="flex-1" style={{ color: '#374151', fontWeight: '500' }}>
+                                {getCategoryDisplayName(category as NewCategory)}
+                              </span>
+                              <span style={{ color: '#111827', fontWeight: '600', marginLeft: '8px' }}>
                                 ¥{Math.round(amount).toLocaleString()}
                               </span>
                             </div>
@@ -329,19 +333,23 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       {/* Expense Category Legend */}
                       <div className="mt-4 p-3 bg-gray-50 rounded-lg max-h-48 overflow-y-auto">
                         <p className="text-xs font-semibold text-gray-700 mb-2">Expense Categories:</p>
-                        <div className="space-y-1 text-xs">
+                        <div className="space-y-1">
                           {topExpenseCategories.slice(0, 10).map(([category, amount]) => (
-                            <div key={category} className="flex items-center justify-between">
-                              <div className="flex items-center flex-1">
-                                <div
-                                  className="w-3 h-3 rounded mr-2 flex-shrink-0"
-                                  style={{ backgroundColor: getCategoryColor(category as NewCategory) }}
-                                />
-                                <span className="text-gray-700 font-medium">
-                                  {getCategoryDisplayName(category as NewCategory)}
-                                </span>
-                              </div>
-                              <span className="text-gray-900 font-semibold ml-2">
+                            <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
+                              <div
+                                className="flex-shrink-0"
+                                style={{
+                                  width: '10px',
+                                  height: '10px',
+                                  backgroundColor: getCategoryColor(category as NewCategory),
+                                  marginRight: '6px',
+                                  borderRadius: '2px'
+                                }}
+                              />
+                              <span className="flex-1" style={{ color: '#374151', fontWeight: '500' }}>
+                                {getCategoryDisplayName(category as NewCategory)}
+                              </span>
+                              <span style={{ color: '#111827', fontWeight: '600', marginLeft: '8px' }}>
                                 ¥{Math.round(amount).toLocaleString()}
                               </span>
                             </div>
