@@ -48,7 +48,6 @@ class ConfigLoader {
   private loadConfigs() {
     // ALWAYS use the hardcoded column mapping data to ensure PayPay and Orico work
     this.columnMapping = columnMappingData as ColumnMapping;
-    // console.log('[ConfigLoader] Using hardcoded column mapping with sources:', Object.keys(this.columnMapping.sources));
     
     // Use default category mapping
     this.categoryMapping = categoryMappingDefault as CategoryMapping;
@@ -139,9 +138,6 @@ class ConfigLoader {
   detectFileType(headers: string[], fileName: string): string | null {
     const mapping = this.getColumnMapping();
 
-    // console.log(`Detecting file type for: ${fileName}`);
-    // console.log(`Headers (first 5):`, headers.slice(0, 5));
-
     // First check against filename patterns in sources
     for (const [sourceType, config] of Object.entries(mapping.sources)) {
       if (config.filename) {
@@ -154,7 +150,6 @@ class ConfigLoader {
             .replace(/\)/g, '\\)');
           const regex = new RegExp(regexPattern, 'i');
           if (regex.test(fileName)) {
-            // console.log(`Filename matched pattern "${pattern}" for type: ${sourceType}`);
             return sourceType;
           }
         }
@@ -177,7 +172,6 @@ class ConfigLoader {
           headers.some(header => header && header.includes(pattern))
         );
         if (headerMatch) {
-          // console.log(`Headers matched patterns for type: ${sourceType}`);
           return sourceType;
         }
       }

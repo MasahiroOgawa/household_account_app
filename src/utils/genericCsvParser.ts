@@ -126,20 +126,10 @@ export const parseGenericCSV = (
   const skipRows = sourceConfig.skipRows || 0;
   const columns = sourceConfig.columns;
   
-  // console.log(`[parseGenericCSV] Parsing ${sourceType} CSV: ${data.length} rows`);
-  // console.log(`[parseGenericCSV] Column config: date=${columns.date}, desc=${columns.description}, amount=${columns.amount || 'N/A'}, withdrawal=${columns.withdrawal || 'N/A'}, deposit=${columns.deposit || 'N/A'}`);
-  // console.log(`[parseGenericCSV] Skip rows: ${skipRows}, Date format: ${sourceConfig.dateFormat}`);
-  // console.log(`[parseGenericCSV] Sample data row ${skipRows}:`, data[skipRows]);
-  
-
-  let rowsProcessed = 0;
-  // let rowsSkipped = 0;
-  
   // Process each row
   for (let i = skipRows; i < data.length; i++) {
     const row = data[i];
     if (!row || row.length === 0) {
-      // rowsSkipped++;
       continue;
     }
     
@@ -150,17 +140,13 @@ export const parseGenericCSV = (
     }
     
     if (!dateStr || dateStr.trim() === '') {
-      // rowsSkipped++;
       continue;
     }
     
     const parsedDate = parseDate(dateStr, sourceConfig.dateFormat);
     if (!parsedDate || !isValid(parsedDate)) {
-      // console.log(`[parseGenericCSV] Failed to parse date "${dateStr}" at row ${i}`);
-      // rowsSkipped++;
       continue;
     }
-    rowsProcessed++;
     
     // Extract description
     let description = '';
@@ -218,7 +204,6 @@ export const parseGenericCSV = (
     
     // Check if this is an internal transfer to skip
     if (configLoader.isInternalTransfer(description) && !configLoader.isFee(description)) {
-      // console.log(`Skipping internal transfer: ${description}`);
       continue;
     }
     
@@ -251,15 +236,7 @@ export const parseGenericCSV = (
     
     transactions.push(transaction);
   }
-  
-  // console.log(`[parseGenericCSV] ${sourceType}: Parsed ${transactions.length} transactions from ${data.length} rows`);
-  // console.log(`[parseGenericCSV] Rows processed: ${rowsProcessed}`);
-  // console.log(`[parseGenericCSV] First 3 transactions:`, transactions.slice(0, 3).map(t => ({
-  //   date: t.date,
-  //   amount: t.amount,
-  //   source: t.source
-  // })));
-  
+
   return transactions;
 };
 
@@ -270,10 +247,6 @@ export const parseCSVFile = async (
 ): Promise<Transaction[]> => {
   return new Promise((resolve, reject) => {
     const processFile = async () => {
-    // console.log('='.repeat(60));
-    // console.log(`[parseCSVFile] Starting to parse: ${file.name}`);
-    // console.log(`[parseCSVFile] File size: ${file.size} bytes`);
-    
     // First try to detect file type from filename alone
     const preliminaryType = configLoader.detectFileType([], file.name);
     
@@ -281,14 +254,11 @@ export const parseCSVFile = async (
     let encoding = "UTF-8";
     if (preliminaryType) {
       const sourceConfig = configLoader.getSourceConfig(preliminaryType);
-      // console.log(`[parseCSVFile] Source config for ${preliminaryType}:`, sourceConfig);
       if (sourceConfig?.encoding) {
         encoding = sourceConfig.encoding;
       }
     }
-    
-    // console.log(`[parseCSVFile] Parsing ${file.name} with encoding: ${encoding}, preliminary type: ${preliminaryType}`);
-    
+
     // Handle encoding conversion for browser
     let fileContent: string;
     try {
@@ -297,11 +267,9 @@ export const parseCSVFile = async (
         const arrayBuffer = await file.arrayBuffer();
         const decoder = new TextDecoder('shift-jis');
         fileContent = decoder.decode(arrayBuffer);
-        // console.log(`[parseCSVFile] Decoded ${file.name} from Shift-JIS`);
       } else {
         // For UTF-8 and other encodings, read as text
         fileContent = await file.text();
-        // console.log(`[parseCSVFile] Read ${file.name} as UTF-8`);
       }
     } catch (error) {
       console.error(`[parseCSVFile] Error reading file ${file.name}:`, error);
@@ -313,9 +281,6 @@ export const parseCSVFile = async (
     Papa.parse(fileContent, {
       complete: (results) => {
         const data = results.data as any[][];
-        // console.log(`[parseCSVFile] PapaParse complete - parsed ${data.length} rows`);
-        // console.log(`[parseCSVFile] First 3 rows:`, data.slice(0, 3));
-        
         const headers = data[0] || [];
         
         // Now detect file type with both headers and filename
@@ -327,13 +292,9 @@ export const parseCSVFile = async (
           resolve([]);
           return;
         }
-        
-        // console.log(`[parseCSVFile] Final detected file type: ${detectedType} for file: ${file.name}`);
-        
+
         // Parse the transactions
         const transactions = parseGenericCSV(data, detectedType, file.name);
-        // console.log(`[parseCSVFile] parseGenericCSV returned ${transactions.length} transactions`);
-        // console.log(`[parseCSVFile] Transaction sources:`, transactions.map(t => t.source).filter((v, i, a) => a.indexOf(v) === i));
         resolve(transactions);
       },
       error: (error: any) => {
@@ -352,17 +313,11 @@ export const parseCSVFiles = async (
   files: File[],
   onProgress?: (current: number, total: number) => void
 ): Promise<Transaction[]> => {
-  // console.log('='.repeat(80));
-  // console.log(`[parseCSVFiles] Starting to parse ${files.length} files`);
-  // console.log(`[parseCSVFiles] Files:`, files.map(f => `${f.name} (${f.size} bytes)`));
-  
   const allTransactions: Transaction[] = [];
   
   for (let i = 0; i < files.length; i++) {
     try {
-      // console.log(`[parseCSVFiles] Processing file ${i+1}/${files.length}: ${files[i].name}`);
       const transactions = await parseCSVFile(files[i]);
-      // console.log(`[parseCSVFiles] Got ${transactions.length} transactions from ${files[i].name}`);
       allTransactions.push(...transactions);
       
       if (onProgress) {
@@ -372,14 +327,6 @@ export const parseCSVFiles = async (
       console.error(`[parseCSVFiles] Error processing file ${files[i].name}:`, error);
     }
   }
-  
-  // console.log(`[parseCSVFiles] TOTAL: ${allTransactions.length} transactions from all files`);
-  // const sourceCounts: Record<string, number> = {};
-  // allTransactions.forEach(t => {
-  //   sourceCounts[t.source] = (sourceCounts[t.source] || 0) + 1;
-  // });
-  // console.log(`[parseCSVFiles] Transactions by source:`, sourceCounts);
-  // console.log('='.repeat(80));
-  
+
   return allTransactions;
 };
