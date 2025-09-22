@@ -463,9 +463,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                   {Object.entries(data.incomeCategoryBreakdown || {})
                                     .sort(([, a], [, b]) => (b as number) - (a as number))
                                     .map(([category, amount], segIndex) => {
-                                      // Use same indexed color approach as pie chart for consistency
-                                      const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf'];
-                                      const categoryColor = blueGreenShades[segIndex % blueGreenShades.length];
+                                      // Use actual category color for proper representation
+                                      const categoryColor = getCategoryColor(category as NewCategory);
                                       return (
                                         <div
                                           key={segIndex}
