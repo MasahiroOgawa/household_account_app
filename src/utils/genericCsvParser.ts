@@ -155,6 +155,11 @@ export const parseGenericCSV = (
     } else if (typeof columns.notes === 'number') {
       description = row[columns.notes] || '';
     }
+
+    // For UFJ bank files, if description (column 2) is empty, use summary (column 1)
+    if (sourceType === 'ufj' && !description && row[1]) {
+      description = row[1];
+    }
     
     // Extract amount
     let amount = 0;
