@@ -16,7 +16,7 @@ const defaultCategories = {
   expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'others']
 };
 
-// Common patterns for initial categorization
+// Common patterns for initial categorization - more comprehensive list
 const commonPatterns: { [pattern: string]: string } = {
   // Income patterns
   '給与': 'salary',
@@ -29,6 +29,7 @@ const commonPatterns: { [pattern: string]: string } = {
   '出金': 'withdraw',
   'ATM': 'withdraw',
   '引出': 'withdraw',
+  '振込': 'withdraw',
 
   // Grocery patterns
   'スーパー': 'grocery',
@@ -38,6 +39,7 @@ const commonPatterns: { [pattern: string]: string } = {
   'セブン－イレブン': 'grocery',
   '7-11': 'grocery',
   '７－１１': 'grocery',
+  '７＆ｉ': 'grocery',
   'ローソン': 'grocery',
   'ファミリーマート': 'grocery',
   'ファミマ': 'grocery',
@@ -45,19 +47,33 @@ const commonPatterns: { [pattern: string]: string } = {
   'イトーヨーカドー': 'grocery',
   '成城石井': 'grocery',
   'まいばすけっと': 'grocery',
+  'マイバスケット': 'grocery',
   'ライフ': 'grocery',
   'アトレ': 'grocery',
   'コンビニ': 'grocery',
   '東急': 'grocery',
   'ﾄｳｷｭｳ': 'grocery',
+  'サミット': 'grocery',
+  'ｻﾐｯﾄ': 'grocery',
+  'マルエツ': 'grocery',
+  'ﾏﾙｴﾂ': 'grocery',
+  'ヴィドフランス': 'grocery',
+  'ｳﾞｨﾄﾞﾌﾗﾝｽ': 'grocery',
+  'ラム': 'grocery',
+  'ﾗﾑｰ': 'grocery',
 
   // Wear/Clothing patterns
   'ユニクロ': 'wear',
+  'ﾕﾆｸﾛ': 'wear',
   'UNIQLO': 'wear',
   'ZARA': 'wear',
   'GU': 'wear',
   '無印良品': 'wear',
+  'ムジルシ': 'wear',
+  'ﾑｼﾞﾙｼ': 'wear',
   'しまむら': 'wear',
+  'ワークマン': 'wear',
+  'ﾜｰｸﾏﾝ': 'wear',
   '衣': 'wear',
   '服': 'wear',
 
@@ -68,6 +84,9 @@ const commonPatterns: { [pattern: string]: string } = {
   '修繕': 'housing',
   '不動産': 'housing',
   '賃貸': 'housing',
+  'ニトリ': 'housing',
+  'ﾆﾄﾘ': 'housing',
+  'IKEA': 'housing',
 
   // Utility patterns
   '電気': 'utility',
@@ -78,10 +97,13 @@ const commonPatterns: { [pattern: string]: string } = {
   '東京ガス': 'utility',
   '携帯': 'utility',
   'ドコモ': 'utility',
+  'ﾄﾞｺﾓ': 'utility',
   'docomo': 'utility',
   'au': 'utility',
   'ソフトバンク': 'utility',
   'softbank': 'utility',
+  '楽天モバイル': 'utility',
+  'ﾗｸﾃﾝﾓﾊﾞｲﾙ': 'utility',
   'インターネット': 'utility',
   'NTT': 'utility',
   '通信': 'utility',
@@ -89,14 +111,19 @@ const commonPatterns: { [pattern: string]: string } = {
   // Medical patterns
   '病院': 'medical',
   '薬局': 'medical',
+  '薬': 'medical',
   'クリニック': 'medical',
   '歯科': 'medical',
   '歯医者': 'medical',
   '医療': 'medical',
   'マツモトキヨシ': 'medical',
+  'ﾏﾂﾓﾄｷﾖｼ': 'medical',
   'ウエルシア': 'medical',
   'ツルハ': 'medical',
-  '薬': 'medical',
+  'スギ薬局': 'medical',
+  'ｽｷﾞﾔｸｷｮｸ': 'medical',
+  'クリエイト': 'medical',
+  'ｸﾘｴｲﾄ': 'medical',
 
   // Education patterns
   '学校': 'education',
@@ -108,6 +135,8 @@ const commonPatterns: { [pattern: string]: string } = {
   '本屋': 'education',
   '教育': 'education',
   '学習': 'education',
+  'ブックオフ': 'education',
+  'ﾌﾞｯｸｵﾌ': 'education',
 
   // Leisure patterns
   'Netflix': 'leisure',
@@ -118,16 +147,42 @@ const commonPatterns: { [pattern: string]: string } = {
   '映画': 'leisure',
   'カラオケ': 'leisure',
   '旅行': 'leisure',
+  'Trip': 'leisure',
+  'Ｔｒｉｐ': 'leisure',
+  'Ｔｒｉｐ．ｃｏｍ': 'leisure',
+  'Trip.com': 'leisure',
+  '一休': 'leisure',
+  '一休．ｃｏｍ': 'leisure',
   'ホテル': 'leisure',
   'レストラン': 'leisure',
   'カフェ': 'leisure',
   'スタバ': 'leisure',
+  'スターバックス': 'leisure',
   'マクドナルド': 'leisure',
+  'ﾏｸﾄﾞﾅﾙﾄﾞ': 'leisure',
   'マック': 'leisure',
+  'バーガーキング': 'leisure',
+  'ﾊﾞｰｶﾞｰｷﾝｸﾞ': 'leisure',
   '外食': 'leisure',
   'ゲーム': 'leisure',
   '娯楽': 'leisure',
   '遊': 'leisure',
+  'すし': 'leisure',
+  'スシロー': 'leisure',
+  'ｽｼﾛｰ': 'leisure',
+  'トラットリア': 'leisure',
+  'ﾄﾗｯﾄﾘｱ': 'leisure',
+  'パイルダーオン': 'leisure',
+  'ﾊﾟｲﾙﾀﾞｰｵﾝ': 'leisure',
+  'タイトー': 'leisure',
+  'ﾀｲﾄｰ': 'leisure',
+  'カクヤス': 'leisure',
+  'ｶｸﾔｽ': 'leisure',
+  'タクシー': 'leisure',
+  'ﾀｸｼｰ': 'leisure',
+  'フィットネス': 'leisure',
+  'ﾌｨｯﾄﾈｽ': 'leisure',
+  'ANYTIME': 'leisure',
 
   // Investment patterns
   '証券': 'invest',
@@ -144,19 +199,45 @@ const commonPatterns: { [pattern: string]: string } = {
   '贈': 'gift',
   'お祝い': 'gift',
   '花': 'gift',
+
+  // Others - general shopping
+  'Amazon': 'others',
+  'AMAZON': 'others',
+  'アマゾン': 'others',
+  'ｱﾏｿﾞﾝ': 'others',
+  'ヤマダ': 'others',
+  'ﾔﾏﾀﾞ': 'others',
+  'ビックカメラ': 'others',
+  'ﾋﾞｯｸｶﾒﾗ': 'others',
+  'ケーズデンキ': 'others',
+  'ｹｰｽﾞﾃﾞﾝｷ': 'others',
+  'ドンキ': 'others',
+  'ﾄﾞﾝ･ｷﾎｰﾃ': 'others',
+  'ダイソー': 'others',
+  'ﾀﾞｲｿｰ': 'others',
+  'ワッツ': 'others',
+  'ﾜｯﾂ': 'others',
+  'コーナン': 'others',
+  'ｺｰﾅﾝ': 'others',
 };
 
 // Analyze transactions to generate mappings with ALL descriptions
 export const analyzeTransactionsForMapping = (transactions: Transaction[]): CategoryMappingStructure => {
   const allDescriptions = new Map<string, { count: number; type: 'income' | 'expense'; suggestedCategory: string }>();
 
+  console.log(`Analyzing ${transactions.length} transactions for category mapping...`);
+
   // Collect ALL unique descriptions from transactions
   transactions.forEach(transaction => {
-    const description = transaction.description?.trim();
-    if (!description) return;
+    // Get the exact description as it appears in the data
+    const description = transaction.description;
+    if (!description || description.trim() === '') return;
+
+    // Use the exact description (don't trim or modify it)
+    const key = description;
 
     // Store the description with its frequency and type
-    const existing = allDescriptions.get(description);
+    const existing = allDescriptions.get(key);
     if (existing) {
       existing.count++;
     } else {
@@ -164,21 +245,23 @@ export const analyzeTransactionsForMapping = (transactions: Transaction[]): Cate
       let suggestedCategory = '';
       const lowerDesc = description.toLowerCase();
 
-      // Check for pattern matches
-      for (const [pattern, category] of Object.entries(commonPatterns)) {
+      // Check for pattern matches (check longer patterns first)
+      const sortedPatterns = Object.entries(commonPatterns).sort((a, b) => b[0].length - a[0].length);
+
+      for (const [pattern, category] of sortedPatterns) {
         if (lowerDesc.includes(pattern.toLowerCase())) {
           suggestedCategory = category;
           break;
         }
       }
 
-      // If no pattern matched, assign default category
+      // If no pattern matched, assign default category based on transaction type
       if (!suggestedCategory) {
         if (transaction.type === 'income') {
-          // Check for specific income patterns
-          if (lowerDesc.includes('給') || lowerDesc.includes('賞与')) {
+          // More specific income detection
+          if (lowerDesc.includes('給') || lowerDesc.includes('賞与') || lowerDesc.includes('salary')) {
             suggestedCategory = 'salary';
-          } else if (lowerDesc.includes('還付') || lowerDesc.includes('税')) {
+          } else if (lowerDesc.includes('還付') || lowerDesc.includes('税') || lowerDesc.includes('refund')) {
             suggestedCategory = 'country_refund';
           } else if (lowerDesc.includes('返金') || lowerDesc.includes('払戻')) {
             suggestedCategory = 'company_refund';
@@ -188,26 +271,24 @@ export const analyzeTransactionsForMapping = (transactions: Transaction[]): Cate
             suggestedCategory = 'others_income';
           }
         } else {
-          // For expenses, try to be more specific
-          if (lowerDesc.includes('アトレ') || lowerDesc.includes('ｱﾄﾚ')) {
-            suggestedCategory = 'grocery';
-          } else if (lowerDesc.includes('東急') || lowerDesc.includes('ﾄｳｷｭｳ')) {
-            suggestedCategory = 'grocery';
-          } else if (lowerDesc.includes('ラクテン') || lowerDesc.includes('ﾗｸﾃﾝ')) {
-            suggestedCategory = 'grocery';
+          // More specific expense detection
+          if (lowerDesc.includes('.com') || lowerDesc.includes('ｃｏｍ')) {
+            suggestedCategory = 'leisure'; // For Trip.com etc
           } else {
             suggestedCategory = 'others';
           }
         }
       }
 
-      allDescriptions.set(description, {
+      allDescriptions.set(key, {
         count: 1,
         type: transaction.type as 'income' | 'expense',
         suggestedCategory: suggestedCategory
       });
     }
   });
+
+  console.log(`Found ${allDescriptions.size} unique descriptions`);
 
   // Build mappings object with ALL descriptions, sorted alphabetically
   const mappings: { [description: string]: string } = {};
@@ -222,15 +303,9 @@ export const analyzeTransactionsForMapping = (transactions: Transaction[]): Cate
     mappings[description] = info.suggestedCategory;
   });
 
-  // Ensure specific mappings as requested by user
-  mappings['アトレオオイマチ'] = 'grocery';
-
-  // Add any descriptions that contain specific patterns
-  Object.keys(mappings).forEach(desc => {
-    if (desc.includes('ﾗｸﾃﾝﾍﾟｲ') && desc.includes('ﾄｳｷｭｳ')) {
-      mappings[desc] = 'grocery';
-    }
-  });
+  // Log some examples
+  const examples = Object.entries(mappings).slice(0, 5);
+  console.log('Sample mappings:', examples);
 
   return {
     categories: defaultCategories,
@@ -250,19 +325,24 @@ export const generateCategoryMappingFile = (transactions: Transaction[]): void =
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'categoryMapping_generated.json';
+  a.download = 'categoryMapping.json'; // Changed from categoryMapping_generated.json
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 
-  // Log summary for user feedback
-  // console.log('Generated category mapping with:', {
-  //   incomeCategories: mapping.categories.income.length,
-  //   expenseCategories: mapping.categories.expense.length,
-  //   mappingsCount: Object.keys(mapping.mappings).length,
-  //   descriptions: `All ${Object.keys(mapping.mappings).length} unique descriptions mapped`
-  // });
+  console.log('Generated category mapping with:', {
+    incomeCategories: mapping.categories.income.length,
+    expenseCategories: mapping.categories.expense.length,
+    mappingsCount: Object.keys(mapping.mappings).length,
+    descriptions: `All ${Object.keys(mapping.mappings).length} unique descriptions mapped`
+  });
+
+  // Alert user
+  alert(`Category mapping generated successfully!\n\n` +
+    `✓ ${Object.keys(mapping.mappings).length} unique descriptions mapped\n` +
+    `✓ File downloaded as: categoryMapping.json\n\n` +
+    `Please review and edit the mappings, then save to data/categoryMapping.json`);
 };
 
 // Export mapping for manual download

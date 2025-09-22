@@ -71,13 +71,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'categoryMapping_generated.json';
+        a.download = 'categoryMapping.json';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        setMappingStatus(`✅ Generated mapping from ${transactions.length} transactions. File downloaded as categoryMapping_generated.json`);
+        setMappingStatus(`✅ Generated mapping from ${transactions.length} transactions with ${Object.keys(mappingJson ? JSON.parse(mappingJson).mappings : {}).length} unique descriptions. File downloaded as categoryMapping.json`);
       } catch (err) {
         console.error('Error generating category mapping:', err);
         setMappingStatus('❌ Error generating category mapping');
@@ -183,7 +183,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading,
             <li>Select your CSV files when prompted</li>
             <li>System extracts ALL unique descriptions from transactions</li>
             <li>Each description is mapped alphabetically (e.g., アトレオオイマチ → grocery)</li>
-            <li>Downloads categoryMapping_generated.json with all mappings</li>
+            <li>Downloads categoryMapping.json with all mappings</li>
             <li>Edit the file manually to fix any incorrect mappings</li>
             <li>Save it as data/categoryMapping.json for future use</li>
           </ol>
