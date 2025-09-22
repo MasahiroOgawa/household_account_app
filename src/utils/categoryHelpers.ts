@@ -10,7 +10,7 @@ const categoryDisplayInfo: Record<string, { name: string; color: string; type: '
   'other_income': { name: 'Other Income', color: '#2dd4bf', type: 'income' }, // Teal-400
 
   // Expense categories - Non-green distinct colors
-  'invest': { name: 'Investment', color: '#3b82f6', type: 'expense' },          // Blue
+  'invest': { name: 'Investment', color: '#f97316', type: 'expense' },          // Orange
   'education': { name: 'Education', color: '#8b5cf6', type: 'expense' },        // Violet
   'grocery': { name: 'Grocery', color: '#f59e0b', type: 'expense' },            // Amber
   'wear': { name: 'Clothing/Wear', color: '#ec4899', type: 'expense' },         // Pink
@@ -38,7 +38,7 @@ const categoryDisplayInfo: Record<string, { name: string; color: string; type: '
   'communication': { name: 'Communication', color: '#14b8a6', type: 'expense' },
   'personal_care': { name: 'Personal Care', color: '#f97316', type: 'expense' },
   'pets': { name: 'Pets', color: '#fb923c', type: 'expense' },
-  'investment': { name: 'Investment', color: '#3b82f6', type: 'expense' },
+  'investment': { name: 'Investment', color: '#f97316', type: 'expense' },
   'taxes': { name: 'Taxes', color: '#b91c1c', type: 'expense' },
   'pension': { name: 'Pension', color: '#991b1b', type: 'expense' },
   'other': { name: 'Other', color: '#64748b', type: 'expense' },
@@ -53,6 +53,14 @@ export const getCategoryColor = (category: string): string => {
   // First check our predefined display info
   const info = categoryDisplayInfo[normalizedCategory];
   if (info) return info.color;
+
+  // Handle variations (invest vs investment)
+  if (normalizedCategory === 'invest' && categoryDisplayInfo['investment']) {
+    return categoryDisplayInfo['investment'].color;
+  }
+  if (normalizedCategory === 'investment' && categoryDisplayInfo['invest']) {
+    return categoryDisplayInfo['invest'].color;
+  }
 
   // Check if this is an income category by checking known income category names
   const incomeCategories = ['salary', 'company_refund', 'country_refund', 'withdraw', 'other_income'];
