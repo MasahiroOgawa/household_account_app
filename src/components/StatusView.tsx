@@ -56,6 +56,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     income: number;
     expenses: number;
     categoryBreakdown: Record<string, number>;
+    incomeCategoryBreakdown: Record<string, number>;
   }
 
   const monthlyData: MonthlyDataItem[] = months.map(month => {
@@ -77,12 +78,20 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
         return acc;
       }, {} as Record<string, number>);
 
+    const monthlyIncomeCategories = monthTransactions
+      .filter(t => t.type === 'income')
+      .reduce((acc, t) => {
+        acc[t.category] = (acc[t.category] || 0) + t.amount;
+        return acc;
+      }, {} as Record<string, number>);
+
     return {
       month: format(month, 'MMM yyyy'),
       shortMonth: format(month, 'MMM'),
       income,
       expenses,
-      categoryBreakdown: monthlyExpenseCategories
+      categoryBreakdown: monthlyExpenseCategories,
+      incomeCategoryBreakdown: monthlyIncomeCategories
     };
   });
 
@@ -159,7 +168,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
                             {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
                               const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
-                              const colors = ['#10B981', '#059669', '#047857', '#065F46', '#064E3B', '#022C22'];
+                              const categoryColor = getCategoryColor(category as NewCategory);
                               const circumference = 2 * Math.PI * 15;
                               const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
                               const strokeDashoffset = -topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalIncome) * circumference), 0);
@@ -171,7 +180,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                     cy="50"
                                     r="30"
                                     fill="transparent"
-                                    stroke={colors[index % colors.length]}
+                                    stroke={categoryColor}
                                     strokeWidth="15"
                                     strokeDasharray={strokeDasharray}
                                     strokeDashoffset={strokeDashoffset}
@@ -214,23 +223,26 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         </div>
                       </div>
 
-                      <div className="space-y-3 max-h-40 overflow-y-auto">
-                        {/* Income Category Legend */}
-                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-700 mb-2">Income Sources:</p>
-                          <div className="space-y-1 text-xs">
-                            {topIncomeCategories.slice(0, 4).map(([category, amount]) => (
-                              <div key={category} className="flex items-center">
+                      {/* Income Category Legend */}
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-700 mb-2">Income Sources:</p>
+                        <div className="space-y-1 text-xs">
+                          {topIncomeCategories.map(([category, amount]) => (
+                            <div key={category} className="flex items-center justify-between">
+                              <div className="flex items-center flex-1">
                                 <div
                                   className="w-3 h-3 rounded mr-2 flex-shrink-0"
                                   style={{ backgroundColor: getCategoryColor(category as NewCategory) }}
                                 />
-                                <span className="text-gray-600 truncate">
-                                  {getCategoryDisplayName(category as NewCategory)}: ¥{Math.round(amount).toLocaleString()}
+                                <span className="text-gray-700 font-medium">
+                                  {getCategoryDisplayName(category as NewCategory)}
                                 </span>
                               </div>
-                            ))}
-                          </div>
+                              <span className="text-gray-900 font-semibold ml-2">
+                                ¥{Math.round(amount).toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -314,27 +326,30 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         </div>
                       </div>
 
-                      <div className="space-y-3 max-h-40 overflow-y-auto">
-                        {/* Expense Category Legend */}
-                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-700 mb-2">Expense Categories:</p>
-                          <div className="space-y-1 text-xs">
-                            {topExpenseCategories.slice(0, 8).map(([category, amount]) => (
-                              <div key={category} className="flex items-center">
+                      {/* Expense Category Legend */}
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg max-h-48 overflow-y-auto">
+                        <p className="text-xs font-semibold text-gray-700 mb-2">Expense Categories:</p>
+                        <div className="space-y-1 text-xs">
+                          {topExpenseCategories.slice(0, 10).map(([category, amount]) => (
+                            <div key={category} className="flex items-center justify-between">
+                              <div className="flex items-center flex-1">
                                 <div
                                   className="w-3 h-3 rounded mr-2 flex-shrink-0"
                                   style={{ backgroundColor: getCategoryColor(category as NewCategory) }}
                                 />
-                                <span className="text-gray-600 truncate">
-                                  {getCategoryDisplayName(category as NewCategory)}: ¥{Math.round(amount).toLocaleString()}
+                                <span className="text-gray-700 font-medium">
+                                  {getCategoryDisplayName(category as NewCategory)}
                                 </span>
                               </div>
-                            ))}
-                          </div>
-                          {topExpenseCategories.length > 8 && (
-                            <p className="text-xs text-gray-500 mt-2">+{topExpenseCategories.length - 8} more categories</p>
-                          )}
+                              <span className="text-gray-900 font-semibold ml-2">
+                                ¥{Math.round(amount).toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
                         </div>
+                        {topExpenseCategories.length > 10 && (
+                          <p className="text-xs text-gray-500 mt-2">+{topExpenseCategories.length - 10} more</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -349,11 +364,11 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       <p className="text-gray-600">Side-by-side comparison of monthly income and expenses over the last 12 months</p>
                       <div className="mt-2 flex items-center gap-4 text-xs">
                         <div className="flex items-center">
-                          <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
-                          <span className="text-gray-600">Income</span>
+                          <div className="w-3 h-3 bg-gradient-to-t from-green-400 to-blue-400 rounded mr-1"></div>
+                          <span className="text-gray-600">Income (stacked by category)</span>
                         </div>
                         <div className="flex items-center">
-                          <div className="w-3 h-3 bg-gradient-to-t from-gray-400 to-blue-400 rounded mr-1"></div>
+                          <div className="w-3 h-3 bg-gradient-to-t from-gray-400 to-purple-400 rounded mr-1"></div>
                           <span className="text-gray-600">Expenses (stacked by category)</span>
                         </div>
                       </div>
@@ -434,27 +449,54 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                 flex: '0 0 auto',
                                 height: '100%' // Take full height so bars start from bottom
                               }}>
-                                {/* Income Bar - GREEN */}
+                                {/* Income Bar - Stacked by Category */}
                                 <div style={{
                                   width: '30px',
                                   height: `${incomeHeight}px`,
-                                  backgroundColor: '#10B981',
                                   border: '2px solid #059669',
                                   borderTopLeftRadius: '6px',
                                   borderTopRightRadius: '6px',
-                                  boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                                   cursor: 'pointer',
                                   transition: 'all 0.2s ease',
                                   minHeight: '4px',
                                   display: 'flex',
-                                  alignItems: 'flex-end',
-                                  justifyContent: 'center',
-                                  color: 'white',
-                                  fontSize: '9px',
-                                  fontWeight: 'bold',
-                                  paddingBottom: '2px'
-                                }}>
-                                  {incomeHeight > 35 && data.income > 0 && `¥${Math.round(data.income / 1000)}k`}
+                                  flexDirection: 'column-reverse',
+                                  overflow: 'hidden',
+                                  position: 'relative'
+                                }} title={`Income: ¥${Math.round(data.income).toLocaleString()}`}>
+                                  {/* Stack income category segments */}
+                                  {Object.entries(data.incomeCategoryBreakdown || {})
+                                    .sort(([, a], [, b]) => (b as number) - (a as number))
+                                    .map(([category, amount], segIndex) => (
+                                      <div
+                                        key={segIndex}
+                                        style={{
+                                          width: '100%',
+                                          height: `${Math.max(((amount as number) / maxMonthlyAmount) * 392, (amount as number) > 0 ? 2 : 0)}px`,
+                                          backgroundColor: getCategoryColor(category as NewCategory),
+                                          borderTop: segIndex > 0 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                                          flexShrink: 0
+                                        }}
+                                        title={`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount as number).toLocaleString()}`}
+                                      />
+                                    ))}
+                                  {/* Show total on top if there's space */}
+                                  {incomeHeight > 35 && data.income > 0 && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      top: '2px',
+                                      left: '0',
+                                      right: '0',
+                                      textAlign: 'center',
+                                      color: 'white',
+                                      fontSize: '9px',
+                                      fontWeight: 'bold',
+                                      textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                                    }}>
+                                      ¥{Math.round(data.income / 1000)}k
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Expense Bar - Stacked by Category */}
@@ -547,45 +589,6 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       </div>
                     </div>
 
-                    {/* Legend */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '32px',
-                      marginTop: '32px',
-                      paddingTop: '24px',
-                      borderTop: '1px solid #E5E7EB'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          backgroundColor: '#10B981',
-                          border: '2px solid #059669',
-                          borderRadius: '4px',
-                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
-                        }}></div>
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#1F2937' }}>Income</div>
-                          <div style={{ fontSize: '12px', color: '#6B7280' }}>Total: ¥{totalIncome.toLocaleString()}</div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          backgroundColor: '#EF4444',
-                          border: '2px solid #DC2626',
-                          borderRadius: '4px',
-                          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
-                        }}></div>
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#1F2937' }}>Expenses</div>
-                          <div style={{ fontSize: '12px', color: '#6B7280' }}>Total: ¥{totalExpenses.toLocaleString()}</div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </>
               );
