@@ -7,7 +7,7 @@ import { parseCSVFiles } from '../utils/genericCsvParser';
 import { detectAndMergeDuplicates } from '../utils/duplicateDetector';
 import { exportTransactionsToCSV } from '../utils/csvExporter';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
-import { LogOut, Upload, BarChart3, FileText } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
@@ -28,9 +28,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
     try {
       // Process all files using the generic parser
-      const allParsedTransactions = await parseCSVFiles(files, (current, total) => {
-        console.log(`Processing file ${current} of ${total}`);
-      });
+      const allParsedTransactions = await parseCSVFiles(files);
 
       if (allParsedTransactions.length === 0) {
         throw new Error('No valid transactions found in the uploaded files');

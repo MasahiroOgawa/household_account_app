@@ -1,15 +1,17 @@
 import categoryMappingDefault from '../../data/categoryMapping.json';
-import { defaultColumnMapping } from './defaultColumnMapping';
 import { columnMappingData } from './columnMappingData';
 
 export interface CategoryMapping {
   mappings: Record<string, string>;
-  defaultCategory: string;
+  defaultCategory: string | { income: string; expense: string };
   categories: Record<string, {
     name: string;
     type: 'income' | 'expense' | 'transfer';
     color: string;
-  }>;
+  }> | {
+    income: Record<string, { name: string; color: string }>;
+    expense: Record<string, { name: string; color: string }>;
+  };
 }
 
 export interface ColumnMapping {
@@ -46,7 +48,7 @@ class ConfigLoader {
   private loadConfigs() {
     // ALWAYS use the hardcoded column mapping data to ensure PayPay and Orico work
     this.columnMapping = columnMappingData as ColumnMapping;
-    console.log('[ConfigLoader] Using hardcoded column mapping with sources:', Object.keys(this.columnMapping.sources));
+    // console.log('[ConfigLoader] Using hardcoded column mapping with sources:', Object.keys(this.columnMapping.sources));
     
     // Use default category mapping
     this.categoryMapping = categoryMappingDefault as CategoryMapping;
@@ -77,16 +79,28 @@ class ConfigLoader {
   }
 
   // Helper method to detect category from description
-  detectCategory(description: string): string {
+  detectCategory(description: string, transactionType?: 'income' | 'expense'): string {
     const mapping = this.getCategoryMapping();
-    const lowerDescription = description.toLowerCase();
 
+    // First check if there's an exact match in mappings
+    if (mapping.mappings[description]) {
+      return mapping.mappings[description];
+    }
+
+    // Then check for partial matches
+    const lowerDescription = description.toLowerCase();
     for (const [keyword, category] of Object.entries(mapping.mappings)) {
       if (lowerDescription.includes(keyword.toLowerCase())) {
         return category;
       }
     }
 
+    // Return appropriate default category
+    if (typeof mapping.defaultCategory === 'object') {
+      return transactionType === 'income'
+        ? mapping.defaultCategory.income
+        : mapping.defaultCategory.expense;
+    }
     return mapping.defaultCategory;
   }
 
@@ -119,10 +133,9 @@ class ConfigLoader {
   // Helper method to detect file type based on headers or filename
   detectFileType(headers: string[], fileName: string): string | null {
     const mapping = this.getColumnMapping();
-    const lowerFileName = fileName.toLowerCase();
 
-    console.log(`Detecting file type for: ${fileName}`);
-    console.log(`Headers (first 5):`, headers.slice(0, 5));
+    // console.log(`Detecting file type for: ${fileName}`);
+    // console.log(`Headers (first 5):`, headers.slice(0, 5));
 
     // First check against filename patterns in sources
     for (const [sourceType, config] of Object.entries(mapping.sources)) {
@@ -136,7 +149,7 @@ class ConfigLoader {
             .replace(/\)/g, '\\)');
           const regex = new RegExp(regexPattern, 'i');
           if (regex.test(fileName)) {
-            console.log(`Filename matched pattern "${pattern}" for type: ${sourceType}`);
+            // console.log(`Filename matched pattern "${pattern}" for type: ${sourceType}`);
             return sourceType;
           }
         }
@@ -159,7 +172,7 @@ class ConfigLoader {
           headers.some(header => header && header.includes(pattern))
         );
         if (headerMatch) {
-          console.log(`Headers matched patterns for type: ${sourceType}`);
+          // console.log(`Headers matched patterns for type: ${sourceType}`);
           return sourceType;
         }
       }
