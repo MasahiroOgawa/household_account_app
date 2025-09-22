@@ -94,6 +94,46 @@ class ConfigLoader {
       }
     }
 
+    // If no mapping found and it's income, try to detect common income patterns
+    if (transactionType === 'income') {
+      // Check for ATM/withdrawal patterns
+      if (lowerDescription.includes('atm') ||
+          lowerDescription.includes('ａｔｍ') ||
+          lowerDescription.includes('出金') ||
+          lowerDescription.includes('引出') ||
+          lowerDescription.includes('引き出') ||
+          lowerDescription.includes('現金')) {
+        return 'withdraw';
+      }
+
+      // Check for salary patterns
+      if (lowerDescription.includes('給与') ||
+          lowerDescription.includes('給料') ||
+          lowerDescription.includes('賞与') ||
+          lowerDescription.includes('salary') ||
+          lowerDescription.includes('ボーナス')) {
+        return 'salary';
+      }
+
+      // Check for refund patterns
+      if (lowerDescription.includes('還付') ||
+          lowerDescription.includes('税') ||
+          lowerDescription.includes('refund')) {
+        return 'country_refund';
+      }
+
+      if (lowerDescription.includes('返金') ||
+          lowerDescription.includes('払戻')) {
+        return 'company_refund';
+      }
+
+      // Check for bank transfer patterns (usually withdrawals)
+      if (lowerDescription.includes('振込') ||
+          lowerDescription.includes('振替')) {
+        return 'withdraw';
+      }
+    }
+
     // Return appropriate default category
     if (mapping.defaultCategory) {
       if (typeof mapping.defaultCategory === 'object') {

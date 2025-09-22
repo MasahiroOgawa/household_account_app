@@ -98,6 +98,19 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     };
   });
 
+  // Debug: Log other_income transactions
+  const otherIncomeTransactions = transactions.filter(t => t.category === 'other_income');
+  if (otherIncomeTransactions.length > 0) {
+    console.log('=== Other Income Debug Info ===');
+    console.log('Count:', otherIncomeTransactions.length);
+    console.log('Total Amount:', otherIncomeTransactions.reduce((acc, t) => acc + t.amount, 0));
+    console.log('Sample descriptions (first 10):');
+    otherIncomeTransactions.slice(0, 10).forEach(t => {
+      console.log(`  - "${t.description}" : ¥${t.amount} (${t.source})`);
+    });
+    console.log('===============================');
+  }
+
   return (
     <div className="space-y-8">
       <div>
