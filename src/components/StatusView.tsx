@@ -33,6 +33,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
   const topIncomeCategories = Object.entries(incomeCategories)
     .sort(([, a], [, b]) => b - a);
 
+
   // Expense category breakdown
   const expenseCategories = filteredTransactions
     .filter(t => t.type === 'expense')
@@ -171,7 +172,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                             {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
                               const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
                               const categoryColor = getCategoryColor(category as NewCategory);
-                              const circumference = 2 * Math.PI * 15;
+                              const radius = 30;
+                              const circumference = 2 * Math.PI * radius;
                               const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
                               const strokeDashoffset = -topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalIncome) * circumference), 0);
 
@@ -272,7 +274,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                 {topExpenseCategories.map(([category, amount], index) => {
                                   const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
                                   const categoryColor = getCategoryColor(category as NewCategory);
-                                  const circumference = 2 * Math.PI * 15;
+                                  const radius = 30;
+                                  const circumference = 2 * Math.PI * radius;
                                   const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
                                   const strokeDashoffset = -topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalExpenses) * circumference), 0);
 
