@@ -9,6 +9,24 @@ interface StatusViewProps {
   transactions: Transaction[];
 }
 
+// Helper function to get income category color
+const getIncomeCategoryColor = (category: string, index: number): string => {
+  const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf', '#5eead4', '#67e8f9', '#a7f3d0'];
+  const normalizedCategory = category.toLowerCase().trim();
+
+  if (normalizedCategory === 'salary' || normalizedCategory.includes('給')) {
+    return '#06b6d4'; // Cyan for salary
+  } else if (normalizedCategory === 'withdraw' || normalizedCategory.includes('引出') || normalizedCategory.includes('出金')) {
+    return '#22d3ee'; // Lighter cyan for withdrawals
+  } else if (normalizedCategory === 'company_refund' || normalizedCategory === 'country_refund' || normalizedCategory.includes('還付')) {
+    return '#14b8a6'; // Teal for refunds
+  } else if (normalizedCategory === 'insurance' || normalizedCategory.includes('保険')) {
+    return '#10b981'; // Emerald green for insurance income
+  } else {
+    return blueGreenShades[index % blueGreenShades.length];
+  }
+};
+
 export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
   // Filter out internal_transfer transactions
   const filteredTransactions = transactions.filter(t => t.category !== 'internal_transfer');
@@ -171,22 +189,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
                             {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
                               const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
-                              // Use blue-green spectrum for income categories with consistent mapping
-                              const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf', '#5eead4', '#67e8f9', '#a7f3d0'];
-                              let categoryColor: string;
-                              const normalizedCategory = category.toLowerCase().trim();
-                              if (normalizedCategory === 'salary' || normalizedCategory.includes('給')) {
-                                categoryColor = '#06b6d4'; // Cyan for salary
-                              } else if (normalizedCategory === 'withdraw' || normalizedCategory.includes('引出') || normalizedCategory.includes('出金')) {
-                                categoryColor = '#22d3ee'; // Lighter cyan for withdrawals
-                              } else if (normalizedCategory === 'company_refund' || normalizedCategory === 'country_refund' || normalizedCategory.includes('還付')) {
-                                categoryColor = '#14b8a6'; // Teal for refunds
-                              } else if (normalizedCategory === 'insurance' || normalizedCategory.includes('保険')) {
-                                categoryColor = '#10b981'; // Emerald green for insurance income
-                              } else {
-                                // Use indexed color for other income types
-                                categoryColor = blueGreenShades[index % blueGreenShades.length];
-                              }
+                              const categoryColor = getIncomeCategoryColor(category, index);
                               const radius = 30;
                               const circumference = 2 * Math.PI * radius;
                               const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
@@ -235,21 +238,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         <p className="text-xs font-semibold text-gray-700 mb-2">Income Sources:</p>
                         <div className="space-y-1">
                           {topIncomeCategories.map(([category, amount], index) => {
-                            // Use consistent color mapping for income categories
-                            const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf', '#5eead4', '#67e8f9', '#a7f3d0'];
-                            let categoryColor: string;
-                            const normalizedCategory = category.toLowerCase().trim();
-                            if (normalizedCategory === 'salary' || normalizedCategory.includes('給')) {
-                              categoryColor = '#06b6d4'; // Cyan for salary
-                            } else if (normalizedCategory === 'withdraw' || normalizedCategory.includes('引出') || normalizedCategory.includes('出金')) {
-                              categoryColor = '#22d3ee'; // Lighter cyan for withdrawals
-                            } else if (normalizedCategory === 'company_refund' || normalizedCategory === 'country_refund' || normalizedCategory.includes('還付')) {
-                              categoryColor = '#14b8a6'; // Teal for refunds
-                            } else if (normalizedCategory === 'insurance' || normalizedCategory.includes('保険')) {
-                              categoryColor = '#10b981'; // Emerald green for insurance income
-                            } else {
-                              categoryColor = blueGreenShades[index % blueGreenShades.length];
-                            }
+                            const categoryColor = getIncomeCategoryColor(category, index);
                             return (
                             <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
                               <div
@@ -490,23 +479,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                   {Object.entries(data.incomeCategoryBreakdown || {})
                                     .sort(([, a], [, b]) => (b as number) - (a as number))
                                     .map(([category, amount], segIndex) => {
-                                      // Use blue-green spectrum for all income categories
-                                      const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf', '#5eead4', '#67e8f9', '#a7f3d0'];
-                                      // For known income categories, use specific colors
-                                      let categoryColor: string;
-                                      const normalizedCategory = category.toLowerCase().trim();
-                                      if (normalizedCategory === 'salary' || normalizedCategory.includes('給')) {
-                                        categoryColor = '#06b6d4'; // Cyan for salary
-                                      } else if (normalizedCategory === 'withdraw' || normalizedCategory.includes('引出') || normalizedCategory.includes('出金')) {
-                                        categoryColor = '#22d3ee'; // Lighter cyan for withdrawals
-                                      } else if (normalizedCategory === 'company_refund' || normalizedCategory === 'country_refund' || normalizedCategory.includes('還付')) {
-                                        categoryColor = '#14b8a6'; // Teal for refunds
-                                      } else if (normalizedCategory === 'insurance' || normalizedCategory.includes('保険')) {
-                                        categoryColor = '#10b981'; // Emerald green for insurance income
-                                      } else {
-                                        // Use indexed color for other income types
-                                        categoryColor = blueGreenShades[segIndex % blueGreenShades.length];
-                                      }
+                                      const categoryColor = getIncomeCategoryColor(category, segIndex);
                                       return (
                                         <div
                                           key={segIndex}
