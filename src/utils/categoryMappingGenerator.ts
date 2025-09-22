@@ -29,7 +29,10 @@ const commonPatterns: { [pattern: string]: string } = {
   '出金': 'withdraw',
   'ATM': 'withdraw',
   '引出': 'withdraw',
-  '振込': 'withdraw',
+  '現金': 'withdraw',
+  'ＡＴＭ': 'withdraw',
+  '引き出し': 'withdraw',
+  '銀行振込': 'withdraw',
 
   // Grocery patterns
   'スーパー': 'grocery',
@@ -263,7 +266,11 @@ export const analyzeTransactionsForMapping = (transactions: Transaction[]): Cate
             suggestedCategory = 'country_refund';
           } else if (lowerDesc.includes('返金') || lowerDesc.includes('払戻')) {
             suggestedCategory = 'company_refund';
-          } else if (lowerDesc.includes('atm') || lowerDesc.includes('出金') || lowerDesc.includes('引出')) {
+          } else if (lowerDesc.includes('atm') || lowerDesc.includes('ａｔｍ') || lowerDesc.includes('出金') ||
+                     lowerDesc.includes('引出') || lowerDesc.includes('引き出') || lowerDesc.includes('現金')) {
+            suggestedCategory = 'withdraw';
+          } else if (lowerDesc.includes('振込') || lowerDesc.includes('振替')) {
+            // Bank transfers are typically withdrawals unless they're internal transfers
             suggestedCategory = 'withdraw';
           } else {
             suggestedCategory = 'other_income';
