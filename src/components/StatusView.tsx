@@ -282,9 +282,8 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                               <>
                                 {topExpenseCategories.map(([category, amount], index) => {
                                   const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
-                                  // Use non-green colors for expense categories
-                                  const expenseColors = ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#a855f7', '#e11d48', '#7c2d12', '#fbbf24', '#64748b'];
-                                  const categoryColor = expenseColors[index % expenseColors.length];
+                                  // Use actual category colors for consistency
+                                  const categoryColor = getCategoryColor(category as NewCategory);
                                   const radius = 30;
                                   const circumference = 2 * Math.PI * radius;
                                   const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
@@ -334,7 +333,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         <p className="text-xs font-semibold text-gray-700 mb-2">Expense Categories:</p>
                         <div className="space-y-1">
                           {topExpenseCategories.slice(0, 10).map(([category, amount], index) => {
-                            const expenseColors = ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#a855f7', '#e11d48', '#7c2d12', '#fbbf24', '#64748b'];
+                            const categoryColor = getCategoryColor(category as NewCategory);
                             return (
                             <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
                               <div
@@ -342,7 +341,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                 style={{
                                   width: '10px',
                                   height: '10px',
-                                  backgroundColor: expenseColors[index % expenseColors.length],
+                                  backgroundColor: categoryColor,
                                   marginRight: '6px',
                                   borderRadius: '2px'
                                 }}
