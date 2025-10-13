@@ -17,7 +17,7 @@ const categoryDisplayInfo: Record<string, { name: string; color: string; type: '
   'housing': { name: 'Housing', color: '#ef4444', type: 'expense' },            // Red
   'utility': { name: 'Utility Cost', color: '#f97316', type: 'expense' },       // Orange
   'medical': { name: 'Medical Expenses', color: '#a855f7', type: 'expense' },   // Purple
-  'leisure': { name: 'Leisure', color: '#06b6d4', type: 'expense' },            // Cyan
+  'leisure': { name: 'Leisure', color: '#3b82f6', type: 'expense' },            // Blue
   'gift': { name: 'Gift', color: '#e11d48', type: 'expense' },                  // Rose
   'insurance': { name: 'Insurance', color: '#7c2d12', type: 'expense' },        // Brown
   'internal_transfer': { name: 'Internal Transfer', color: '#475569', type: 'expense' }, // Slate
