@@ -3,6 +3,7 @@ import { columnMappingData } from './columnMappingData';
 
 export interface CategoryMapping {
   mappings: Record<string, string>;
+  subcategories?: Record<string, string>;
   defaultCategory?: string | { income: string; expense: string };
   categories: {
     income?: string[] | Record<string, { name: string; color: string }>;
@@ -83,13 +84,22 @@ class ConfigLoader {
 
     // First check if there's an exact match in mappings
     if (mapping.mappings[description]) {
-      return mapping.mappings[description];
+      const mappedCategory = mapping.mappings[description];
+      // Check if this is a subcategory that needs further mapping
+      if (mapping.subcategories && mapping.subcategories[mappedCategory]) {
+        return mapping.subcategories[mappedCategory];
+      }
+      return mappedCategory;
     }
 
     // Then check for partial matches
     const lowerDescription = description.toLowerCase();
     for (const [keyword, category] of Object.entries(mapping.mappings)) {
       if (lowerDescription.includes(keyword.toLowerCase())) {
+        // Check if this is a subcategory that needs further mapping
+        if (mapping.subcategories && mapping.subcategories[category]) {
+          return mapping.subcategories[category];
+        }
         return category;
       }
     }
