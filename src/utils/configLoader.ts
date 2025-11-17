@@ -92,7 +92,19 @@ class ConfigLoader {
       return mappedCategory;
     }
 
-    // Then check for partial matches
+    // Second, check for prefix matches (description starts with keyword)
+    // This handles cases like "三菱ＮＦＪ銀行 三島支店 普通預金..." matching "三菱ＮＦＪ銀行 三島支店"
+    for (const [keyword, category] of Object.entries(mapping.mappings)) {
+      if (description.startsWith(keyword)) {
+        // Check if this is a subcategory that needs further mapping
+        if (mapping.subcategories && mapping.subcategories[category]) {
+          return mapping.subcategories[category];
+        }
+        return category;
+      }
+    }
+
+    // Then check for partial matches (contains)
     const lowerDescription = description.toLowerCase();
     for (const [keyword, category] of Object.entries(mapping.mappings)) {
       if (lowerDescription.includes(keyword.toLowerCase())) {
