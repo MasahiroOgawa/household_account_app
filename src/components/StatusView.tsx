@@ -332,7 +332,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                       <div className="mt-4 p-3 bg-gray-50 rounded-lg max-h-48 overflow-y-auto">
                         <p className="text-xs font-semibold text-gray-700 mb-2">Expense Categories:</p>
                         <div className="space-y-1">
-                          {topExpenseCategories.slice(0, 10).map(([category, amount], index) => {
+                          {topExpenseCategories.slice(0, 10).map(([category, amount]) => {
                             const categoryColor = getCategoryColor(category as NewCategory);
                             return (
                             <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>

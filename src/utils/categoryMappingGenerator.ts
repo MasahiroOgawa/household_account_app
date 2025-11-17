@@ -226,16 +226,53 @@ const commonPatterns: { [pattern: string]: string } = {
 
 // Analyze transactions to generate mappings with ALL descriptions
 export const analyzeTransactionsForMapping = (transactions: Transaction[]): CategoryMappingStructure => {
+  console.log(`[Category Mapping] Starting analysis of ${transactions.length} transactions`);
   const allDescriptions = new Map<string, { count: number; type: 'income' | 'expense'; suggestedCategory: string }>();
 
   // Collect ALL unique descriptions from transactions
-  transactions.forEach(transaction => {
-    // Get the exact description as it appears in the data
-    const description = transaction.description;
-    if (!description || description.trim() === '') return;
+  let emptyDescriptions = 0;
+  let validDescriptions = 0;
 
-    // Use the exact description (don't trim or modify it)
-    const key = description;
+  transactions.forEach((transaction) => {
+    // Get the exact description as it appears in the data
+    // We want to use the original description from the CSV, not the processed one
+    const description = transaction.description;
+    const shopName = transaction.shopName;
+
+    // Debug logging for first few transactions
+    if (allDescriptions.size < 5) {
+      console.log(`[Category Mapping] Transaction sample:`, {
+        description: transaction.description,
+        shopName: transaction.shopName,
+        amount: transaction.amount,
+        type: transaction.type,
+        category: transaction.category,
+        source: transaction.source
+      });
+    }
+
+    // IMPORTANT: For mapping generation, we want the merchant/shop name
+    // In most CSV formats, this is what should be mapped to categories
+    // Priority: shopName first (extracted from description), then description as fallback
+    let keyToUse = shopName && shopName !== 'Unknown' ? shopName : description;
+
+    // If still empty or generic, try description
+    if (!keyToUse || keyToUse.trim() === '' || keyToUse === 'Unknown') {
+      keyToUse = description;
+    }
+
+    if (!keyToUse || keyToUse.trim() === '') {
+      emptyDescriptions++;
+      if (emptyDescriptions <= 5) {
+        console.log(`[Category Mapping] Empty description/shopName for transaction:`, transaction);
+      }
+      return;
+    }
+
+    validDescriptions++;
+
+    // Use trimmed key to avoid duplicate keys with different whitespace
+    const key = keyToUse.trim();
 
     // Store the description with its frequency and type
     const existing = allDescriptions.get(key);
@@ -244,7 +281,7 @@ export const analyzeTransactionsForMapping = (transactions: Transaction[]): Cate
     } else {
       // Try to determine category based on patterns
       let suggestedCategory = '';
-      const lowerDesc = description.toLowerCase();
+      const lowerDesc = key.toLowerCase();
 
       // Check for pattern matches (check longer patterns first)
       const sortedPatterns = Object.entries(commonPatterns).sort((a, b) => b[0].length - a[0].length);
@@ -305,6 +342,14 @@ export const analyzeTransactionsForMapping = (transactions: Transaction[]): Cate
     const info = allDescriptions.get(description)!;
     mappings[description] = info.suggestedCategory;
   });
+
+  console.log(`[Category Mapping] Statistics:`);
+  console.log(`  - Total transactions: ${transactions.length}`);
+  console.log(`  - Valid descriptions: ${validDescriptions}`);
+  console.log(`  - Empty descriptions: ${emptyDescriptions}`);
+  console.log(`  - Unique descriptions: ${allDescriptions.size}`);
+  console.log(`  - Generated mappings: ${Object.keys(mappings).length}`);
+  console.log(`[Category Mapping] Sample mappings (first 10):`, Object.entries(mappings).slice(0, 10));
 
   return {
     categories: defaultCategories,
