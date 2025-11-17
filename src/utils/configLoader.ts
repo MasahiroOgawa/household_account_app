@@ -82,6 +82,10 @@ class ConfigLoader {
   detectCategory(description: string, transactionType?: 'income' | 'expense'): string {
     const mapping = this.getCategoryMapping();
 
+    // Normalize whitespace: replace multiple spaces/tabs with single space
+    const normalizeWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
+    const normalizedDescription = normalizeWhitespace(description);
+
     // First check if there's an exact match in mappings
     if (mapping.mappings[description]) {
       const mappedCategory = mapping.mappings[description];
@@ -94,8 +98,10 @@ class ConfigLoader {
 
     // Second, check for prefix matches (description starts with keyword)
     // This handles cases like "三菱ＮＦＪ銀行 三島支店 普通預金..." matching "三菱ＮＦＪ銀行 三島支店"
+    // Uses normalized whitespace to handle multiple spaces
     for (const [keyword, category] of Object.entries(mapping.mappings)) {
-      if (description.startsWith(keyword)) {
+      const normalizedKeyword = normalizeWhitespace(keyword);
+      if (normalizedDescription.startsWith(normalizedKeyword)) {
         // Check if this is a subcategory that needs further mapping
         if (mapping.subcategories && mapping.subcategories[category]) {
           return mapping.subcategories[category];
@@ -105,9 +111,10 @@ class ConfigLoader {
     }
 
     // Then check for partial matches (contains)
-    const lowerDescription = description.toLowerCase();
+    const lowerDescription = normalizedDescription.toLowerCase();
     for (const [keyword, category] of Object.entries(mapping.mappings)) {
-      if (lowerDescription.includes(keyword.toLowerCase())) {
+      const normalizedKeyword = normalizeWhitespace(keyword).toLowerCase();
+      if (lowerDescription.includes(normalizedKeyword)) {
         // Check if this is a subcategory that needs further mapping
         if (mapping.subcategories && mapping.subcategories[category]) {
           return mapping.subcategories[category];
