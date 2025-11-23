@@ -1,5 +1,6 @@
 import * as Papa from "papaparse";
 import { Transaction } from "../types/Transaction";
+import { configLoader } from "./configLoader";
 
 // Simple amount parser
 function parseAmount(str: string): number {
@@ -68,15 +69,18 @@ export async function parseCSVFile(file: File): Promise<Transaction[]> {
         const deposit = parseAmount(row[4]);
         
         if (date && (withdrawal > 0 || deposit > 0)) {
+          const transactionType = withdrawal > 0 ? 'expense' : 'income';
+          const category = configLoader.detectCategory(description, transactionType);
+          
           transactions.push({
             id: generateId('ufj'),
             date: formatDate(date),
             time: '12:00:00',
             amount: withdrawal || deposit,
             description: description,
-            category: withdrawal > 0 ? 'expense' : 'income',
+            category: category,
             shopName: description.substring(0, 30),
-            type: withdrawal > 0 ? 'expense' : 'income',
+            type: transactionType,
             source: 'UFJ Bank',
             originalData: { rawRow: row, fileType: 'ufj', fileName: file.name }
           });
@@ -93,13 +97,15 @@ export async function parseCSVFile(file: File): Promise<Transaction[]> {
         const amount = parseAmount(row[5]);
         
         if (date && amount > 0) {
+          const category = configLoader.detectCategory(description, 'expense');
+          
           transactions.push({
             id: generateId('paypay'),
             date: formatDate(date),
             time: '12:00:00',
             amount: amount,
             description: description,
-            category: 'shopping',
+            category: category,
             shopName: description.substring(0, 30),
             type: 'expense',
             source: 'PayPay Card',
@@ -119,15 +125,18 @@ export async function parseCSVFile(file: File): Promise<Transaction[]> {
         const description = row[3] || '';
         
         if (date && (withdrawal > 0 || deposit > 0)) {
+          const transactionType = withdrawal > 0 ? 'expense' : 'income';
+          const category = configLoader.detectCategory(description, transactionType);
+          
           transactions.push({
             id: generateId('smbc'),
             date: formatDate(date),
             time: '12:00:00',
             amount: withdrawal || deposit,
             description: description,
-            category: withdrawal > 0 ? 'expense' : 'income',
+            category: category,
             shopName: description.substring(0, 30),
-            type: withdrawal > 0 ? 'expense' : 'income',
+            type: transactionType,
             source: 'SMBC Bank',
             originalData: { rawRow: row, fileType: 'smbc', fileName: file.name }
           });
@@ -145,15 +154,18 @@ export async function parseCSVFile(file: File): Promise<Transaction[]> {
         const description = row[4] || '';
         
         if (date && (withdrawal > 0 || deposit > 0)) {
+          const transactionType = withdrawal > 0 ? 'expense' : 'income';
+          const category = configLoader.detectCategory(description, transactionType);
+          
           transactions.push({
             id: generateId('jre'),
             date: formatDate(date),
             time: '12:00:00',
             amount: withdrawal || deposit,
             description: description,
-            category: withdrawal > 0 ? 'expense' : 'income',
+            category: category,
             shopName: description.substring(0, 30),
-            type: withdrawal > 0 ? 'expense' : 'income',
+            type: transactionType,
             source: 'JRE Bank',
             originalData: { rawRow: row, fileType: 'jre', fileName: file.name }
           });

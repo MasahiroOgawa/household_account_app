@@ -1,13 +1,25 @@
 import { columnMappingData } from './columnMappingData';
-import sampleCategoryMapping from '../../sample_data/categoryMapping.json';
 
-// Try to import from data directory, fallback to sample
-let categoryMappingDefault: any;
-try {
-  categoryMappingDefault = require('../../data/categoryMapping.json');
-} catch {
-  categoryMappingDefault = sampleCategoryMapping;
+// Function to check if file exists and load it
+function tryLoadJson(primaryPath: string, fallbackPath: string): any {
+  try {
+    // First try to load from primary path (data directory)
+    return require(primaryPath);
+  } catch (e) {
+    try {
+      // If primary fails, load from fallback (sample_data)
+      return require(fallbackPath);
+    } catch (e2) {
+      throw new Error(`Could not load config from ${primaryPath} or ${fallbackPath}`);
+    }
+  }
 }
+
+// Load category mapping - prioritize data/ over sample_data/
+const categoryMappingDefault = tryLoadJson(
+  '../../data/categoryMapping.json',
+  '../../sample_data/categoryMapping.json'
+);
 
 export interface CategoryMapping {
   mappings: Record<string, string>;
