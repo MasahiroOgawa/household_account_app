@@ -2,6 +2,11 @@ import * as Papa from "papaparse";
 import { Transaction } from "../types/Transaction";
 import { format, parse, isValid } from "date-fns";
 import { configLoader } from "./configLoader";
+// @ts-ignore
+import * as EncodingLib from "encoding-japanese";
+
+// Handle the module import properly
+const Encoding = (EncodingLib as any).default || EncodingLib;
 
 // Unique ID generator
 let idCounter = 0;
@@ -114,17 +119,23 @@ export const parseGenericCSV = (
   sourceType: string,
   filename?: string
 ): Transaction[] => {
+  console.log(`[parseGenericCSV] Parsing ${sourceType} with ${data.length} rows`);
   const transactions: Transaction[] = [];
   
   // Get configuration for this source type
   const sourceConfig = configLoader.getSourceConfig(sourceType);
   if (!sourceConfig || !sourceConfig.columns) {
-    console.error(`Configuration not found for source type: ${sourceType}`);
+    console.error(`[parseGenericCSV] Configuration not found for source type: ${sourceType}`);
+    console.error(`[parseGenericCSV] Available configs:`, Object.keys(configLoader.getColumnMapping().sources));
     return transactions;
   }
   
+  console.log(`[parseGenericCSV] Found config for ${sourceType}:`, sourceConfig);
+  
   const skipRows = sourceConfig.skipRows || 0;
   const columns = sourceConfig.columns;
+  
+  console.log(`[parseGenericCSV] Processing rows from ${skipRows} to ${data.length}`);
   
   // Process each row
   for (let i = skipRows; i < data.length; i++) {
@@ -133,26 +144,37 @@ export const parseGenericCSV = (
       continue;
     }
     
+    // Log first few rows for debugging
+    if (i < skipRows + 3) {
+      console.log(`[parseGenericCSV] Row ${i}:`, row);
+    }
+    
     // Extract date
     let dateStr = '';
-    if (typeof columns.date === 'number') {
+    if (typeof columns.date === 'number' && columns.date >= 0 && columns.date < row.length) {
       dateStr = row[columns.date] || '';
     }
     
     if (!dateStr || dateStr.trim() === '') {
+      if (i < skipRows + 3) {
+        console.log(`[parseGenericCSV] Skipping row ${i} - no date found. Date column: ${columns.date}, row length: ${row.length}`);
+      }
       continue;
     }
     
     const parsedDate = parseDate(dateStr, sourceConfig.dateFormat);
     if (!parsedDate || !isValid(parsedDate)) {
+      if (i < skipRows + 5) {
+        console.log(`[parseGenericCSV] Failed to parse date: "${dateStr}" with format: ${sourceConfig.dateFormat}`);
+      }
       continue;
     }
     
     // Extract description
     let description = '';
-    if (typeof columns.description === 'number') {
+    if (typeof columns.description === 'number' && columns.description >= 0 && columns.description < row.length) {
       description = row[columns.description] || '';
-    } else if (typeof columns.notes === 'number') {
+    } else if (typeof columns.notes === 'number' && columns.notes >= 0 && columns.notes < row.length) {
       description = row[columns.notes] || '';
     }
 
@@ -165,7 +187,7 @@ export const parseGenericCSV = (
     let amount = 0;
     let transactionType: 'income' | 'expense' = 'expense';
     
-    if (typeof columns.amount === 'number') {
+    if (typeof columns.amount === 'number' && columns.amount >= 0 && columns.amount < row.length) {
       // Single amount column (can be positive or negative)
       const amountStr = row[columns.amount];
       const parsedAmount = parseAmount(amountStr);
@@ -184,10 +206,15 @@ export const parseGenericCSV = (
       }
       amount = Math.abs(parsedAmount);
       
-    } else if (typeof columns.withdrawal === 'number' && typeof columns.deposit === 'number') {
+    } else if (sourceConfig.amountColumns && 
+               typeof sourceConfig.amountColumns.withdrawal === 'number' && 
+               typeof sourceConfig.amountColumns.deposit === 'number') {
       // Separate withdrawal and deposit columns
-      const withdrawalStr = row[columns.withdrawal] || '';
-      const depositStr = row[columns.deposit] || '';
+      const withdrawalCol = sourceConfig.amountColumns.withdrawal;
+      const depositCol = sourceConfig.amountColumns.deposit;
+      
+      const withdrawalStr = (withdrawalCol >= 0 && withdrawalCol < row.length) ? row[withdrawalCol] : '';
+      const depositStr = (depositCol >= 0 && depositCol < row.length) ? row[depositCol] : '';
       
       const withdrawalAmount = parseAmount(withdrawalStr);
       const depositAmount = parseAmount(depositStr);
@@ -242,6 +269,11 @@ export const parseGenericCSV = (
     transactions.push(transaction);
   }
 
+  console.log(`[parseGenericCSV] Created ${transactions.length} transactions for ${sourceType}`);
+  if (transactions.length > 0) {
+    console.log(`[parseGenericCSV] Sample transaction:`, transactions[0]);
+  }
+  
   return transactions;
 };
 
@@ -267,14 +299,44 @@ export const parseCSVFile = async (
     // Handle encoding conversion for browser
     let fileContent: string;
     try {
-      if (encoding.toLowerCase() === 'shift-jis' || encoding.toLowerCase() === 'shift_jis') {
-        // Read file as ArrayBuffer and convert from Shift-JIS
-        const arrayBuffer = await file.arrayBuffer();
-        const decoder = new TextDecoder('shift-jis');
+      // Read file as ArrayBuffer first
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Detect encoding using encoding-japanese library
+      let detectedEncoding;
+      try {
+        if (!Encoding || !Encoding.detect) {
+          console.error('[parseCSVFile] Encoding library not loaded properly:', Encoding);
+          throw new Error('Encoding library not available');
+        }
+        detectedEncoding = Encoding.detect(uint8Array);
+        console.log(`[parseCSVFile] Detected encoding for ${file.name}: ${detectedEncoding}`);
+      } catch (e) {
+        console.error('[parseCSVFile] Error detecting encoding:', e);
+        detectedEncoding = 'UTF8'; // Fallback
+      }
+      
+      if (detectedEncoding === 'SJIS' || encoding.toLowerCase() === 'shift-jis' || encoding.toLowerCase() === 'shift_jis') {
+        console.log(`[parseCSVFile] Converting ${file.name} from Shift-JIS to Unicode`);
+        // Convert from Shift-JIS to Unicode
+        const unicodeArray = Encoding.convert(uint8Array, {
+          to: 'UNICODE',
+          from: 'SJIS'
+        });
+        fileContent = Encoding.codeToString(unicodeArray);
+      } else if (detectedEncoding === 'UTF8' || detectedEncoding === 'ASCII') {
+        console.log(`[parseCSVFile] Reading ${file.name} as UTF-8`);
+        const decoder = new TextDecoder('utf-8');
         fileContent = decoder.decode(arrayBuffer);
       } else {
-        // For UTF-8 and other encodings, read as text
-        fileContent = await file.text();
+        // Try auto-detection and conversion
+        console.log(`[parseCSVFile] Auto-converting ${file.name} from ${detectedEncoding} to Unicode`);
+        const unicodeArray = Encoding.convert(uint8Array, {
+          to: 'UNICODE',
+          from: 'AUTO'
+        });
+        fileContent = Encoding.codeToString(unicodeArray);
       }
     } catch (error) {
       console.error(`[parseCSVFile] Error reading file ${file.name}:`, error);
@@ -282,11 +344,15 @@ export const parseCSVFile = async (
       fileContent = await file.text();
     }
     
+    console.log(`[parseCSVFile] File content length: ${fileContent.length} characters`);
+    
     // Parse the string content with PapaParse
     Papa.parse(fileContent, {
       complete: (results) => {
         const data = results.data as any[][];
         const headers = data[0] || [];
+        
+        console.log(`[parseCSVFile] File: ${file.name}, Total rows: ${data.length}, Headers:`, headers);
         
         // Now detect file type with both headers and filename
         const detectedType = configLoader.detectFileType(headers, file.name);
@@ -294,12 +360,16 @@ export const parseCSVFile = async (
         if (!detectedType) {
           console.error(`[parseCSVFile] ERROR: Could not detect file type for: ${file.name}`);
           console.error(`[parseCSVFile] Headers were:`, headers);
+          console.error(`[parseCSVFile] First data row:`, data[1]);
           resolve([]);
           return;
         }
 
+        console.log(`[parseCSVFile] Detected file type: ${detectedType}`);
+        
         // Parse the transactions
         const transactions = parseGenericCSV(data, detectedType, file.name);
+        console.log(`[parseCSVFile] Parsed ${transactions.length} transactions from ${file.name}`);
         resolve(transactions);
       },
       error: (error: any) => {
@@ -318,11 +388,14 @@ export const parseCSVFiles = async (
   files: File[],
   onProgress?: (current: number, total: number) => void
 ): Promise<Transaction[]> => {
+  console.log(`[parseCSVFiles] Starting to process ${files.length} files`);
   const allTransactions: Transaction[] = [];
   
   for (let i = 0; i < files.length; i++) {
     try {
+      console.log(`[parseCSVFiles] Processing file ${i+1}/${files.length}: ${files[i].name}`);
       const transactions = await parseCSVFile(files[i]);
+      console.log(`[parseCSVFiles] Got ${transactions.length} transactions from ${files[i].name}`);
       allTransactions.push(...transactions);
       
       if (onProgress) {
@@ -333,5 +406,6 @@ export const parseCSVFiles = async (
     }
   }
 
+  console.log(`[parseCSVFiles] Total transactions from all files: ${allTransactions.length}`);
   return allTransactions;
 };

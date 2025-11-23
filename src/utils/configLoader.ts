@@ -1,5 +1,13 @@
-import categoryMappingDefault from '../../data/categoryMapping.json';
 import { columnMappingData } from './columnMappingData';
+import sampleCategoryMapping from '../../sample_data/categoryMapping.json';
+
+// Try to import from data directory, fallback to sample
+let categoryMappingDefault: any;
+try {
+  categoryMappingDefault = require('../../data/categoryMapping.json');
+} catch {
+  categoryMappingDefault = sampleCategoryMapping;
+}
 
 export interface CategoryMapping {
   mappings: Record<string, string>;
@@ -41,30 +49,40 @@ export interface ColumnMapping {
 class ConfigLoader {
   private categoryMapping: CategoryMapping | null = null;
   private columnMapping: ColumnMapping | null = null;
+  private configInitialized: boolean = false;
 
   constructor() {
-    this.loadConfigs();
+    this.initializeConfigs();
   }
 
-  private loadConfigs() {
-    // ALWAYS use the hardcoded column mapping data to ensure PayPay and Orico work
+  private initializeConfigs() {
+    if (this.configInitialized) return;
+    
+    // Use the already imported categoryMappingDefault (which falls back to sample if needed)
+    this.categoryMapping = categoryMappingDefault as CategoryMapping;
+
+    // Always use the hardcoded column mapping data
     this.columnMapping = columnMappingData as ColumnMapping;
     
-    // Use default category mapping
-    this.categoryMapping = categoryMappingDefault as CategoryMapping;
+    this.configInitialized = true;
+  }
+
+  private ensureConfigLoaded() {
+    if (!this.configInitialized) {
+      // Fallback to synchronous loading with samples
+      this.categoryMapping = categoryMappingDefault as CategoryMapping;
+      this.columnMapping = columnMappingData as ColumnMapping;
+      this.configInitialized = true;
+    }
   }
 
   getCategoryMapping(): CategoryMapping {
-    if (!this.categoryMapping) {
-      this.loadConfigs();
-    }
+    this.ensureConfigLoaded();
     return this.categoryMapping!;
   }
 
   getColumnMapping(): ColumnMapping {
-    if (!this.columnMapping) {
-      this.loadConfigs();
-    }
+    this.ensureConfigLoaded();
     return this.columnMapping!;
   }
 

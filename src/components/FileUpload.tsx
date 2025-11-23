@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { AlertCircle, Upload, Settings } from 'lucide-react';
-import { parseCSVFiles } from '../utils/genericCsvParser';
+import { parseCSVFiles } from '../utils/simpleParser';
 import { exportCategoryMapping } from '../utils/categoryMappingGenerator';
 
 interface FileUploadProps {

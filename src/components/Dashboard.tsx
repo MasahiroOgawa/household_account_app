@@ -3,7 +3,7 @@ import { Transaction, User } from '../types/Transaction';
 import { FileUpload } from './FileUpload';
 import { TransactionTable } from './TransactionTable';
 import { StatusView } from './StatusView';
-import { parseCSVFiles } from '../utils/genericCsvParser';
+import { parseCSVFiles } from '../utils/simpleParser';
 import { detectAndMergeDuplicates } from '../utils/duplicateDetector';
 import { exportTransactionsToCSV } from '../utils/csvExporter';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
@@ -26,21 +26,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setError(null);
 
     try {
-      // Process all files using the generic parser
+      // Process all files using the simple parser
       const allParsedTransactions = await parseCSVFiles(files);
-
+      
       if (allParsedTransactions.length === 0) {
-        throw new Error('No valid transactions found in the uploaded files');
+        setError('No valid transactions found in the uploaded files.');
+        setIsLoading(false);
+        return;
       }
 
       // Merge with existing transactions and detect duplicates
       const uniqueTransactions = detectAndMergeDuplicates([...transactions, ...allParsedTransactions]);
+      
       setTransactions(uniqueTransactions);
-      setCurrentView('main'); // Always show transaction details after upload
+      
+      // Switch to status view after upload
+      setTimeout(() => {
+        setCurrentView('status');
+      }, 100);
       
       // Show success message
       const processedCount = allParsedTransactions.length;
       const finalCount = uniqueTransactions.length - transactions.length;
+      
       if (processedCount !== finalCount) {
         alert(`Processed ${processedCount} transactions from ${files.length} files. ${processedCount - finalCount} duplicates were merged.`);
       } else {
