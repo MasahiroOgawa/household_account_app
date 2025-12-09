@@ -3,29 +3,11 @@ import { Transaction } from '../types/Transaction';
 import { BarChart3, PieChart } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
 import { calculateMonthlyTotals } from '../utils/monthlyCalculations';
-import { getCategoryColor, getCategoryDisplayName, NewCategory } from '../utils/categoryHelpers';
+import { getCategoryColor, getCategoryDisplayName, getIncomeCategoryColor, NewCategory } from '../utils/categoryHelpers';
 
 interface StatusViewProps {
   transactions: Transaction[];
 }
-
-// Helper function to get income category color
-const getIncomeCategoryColor = (category: string, index: number): string => {
-  const blueGreenShades = ['#06b6d4', '#14b8a6', '#10b981', '#22d3ee', '#2dd4bf', '#5eead4', '#67e8f9', '#a7f3d0'];
-  const normalizedCategory = category.toLowerCase().trim();
-
-  if (normalizedCategory === 'salary' || normalizedCategory.includes('給')) {
-    return '#06b6d4'; // Cyan for salary
-  } else if (normalizedCategory === 'withdraw' || normalizedCategory.includes('引出') || normalizedCategory.includes('出金')) {
-    return '#22d3ee'; // Lighter cyan for withdrawals
-  } else if (normalizedCategory === 'company_refund' || normalizedCategory === 'country_refund' || normalizedCategory.includes('還付')) {
-    return '#14b8a6'; // Teal for refunds
-  } else if (normalizedCategory === 'insurance' || normalizedCategory.includes('保険')) {
-    return '#10b981'; // Emerald green for insurance income
-  } else {
-    return blueGreenShades[index % blueGreenShades.length];
-  }
-};
 
 export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
   // Filter out internal_transfer transactions
@@ -48,8 +30,13 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
       return acc;
     }, {} as Record<string, number>);
 
+  // Filter to only positive amounts and calculate total for pie chart
   const topIncomeCategories = Object.entries(incomeCategories)
+    .filter(([, amount]) => amount > 0)  // Only show positive amounts in pie chart
     .sort(([, a], [, b]) => b - a);
+
+  // Calculate positive income total for pie chart percentages
+  const positiveIncomeTotal = topIncomeCategories.reduce((sum, [, amount]) => sum + amount, 0);
 
 
   // Expense category breakdown
@@ -61,8 +48,14 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
       return acc;
     }, {} as Record<string, number>);
 
+  // Filter to only positive amounts
   const topExpenseCategories = Object.entries(expenseCategories)
+    .filter(([, amount]) => amount > 0)  // Only show positive amounts in pie chart
     .sort(([, a], [, b]) => b - a);
+
+  // Calculate positive expense total for pie chart percentages
+  const positiveExpenseTotal = topExpenseCategories.reduce((sum, [, amount]) => sum + amount, 0);
+
 
   // Monthly breakdown for the previous 12 months
   const now = new Date();
@@ -139,7 +132,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
             {/* Calculate max amount for scaling */}
             {(() => {
               const rawMaxAmount = Math.max(...monthlyData.map(d => Math.max(d.income, d.expenses)), 100);
-              
+
               // Helper function to create nice round numbers for Y-axis
               const getNiceRoundMax = (value: number): number => {
                 if (value <= 100000) return 100000; // 100k
@@ -154,9 +147,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                 // For larger amounts, round up to nearest million
                 return Math.ceil(value / 1000000) * 1000000;
               };
-              
+
               const maxMonthlyAmount = getNiceRoundMax(rawMaxAmount);
-              
+
               // Helper function to format amounts nicely
               const formatAmount = (amount: number): string => {
                 if (amount >= 1000000) {
@@ -188,12 +181,12 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                         <div className="relative">
                           <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
                             {topIncomeCategories.length > 0 ? topIncomeCategories.map(([category, amount], index) => {
-                              const percentage = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
+                              const percentage = positiveIncomeTotal > 0 ? (amount / positiveIncomeTotal) * 100 : 0;
                               const categoryColor = getIncomeCategoryColor(category, index);
                               const radius = 30;
                               const circumference = 2 * Math.PI * radius;
                               const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
-                              const strokeDashoffset = -topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalIncome) * circumference), 0);
+                              const strokeDashoffset = -topIncomeCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / positiveIncomeTotal) * circumference), 0);
 
                               return (
                                 <g key={category}>
@@ -240,24 +233,24 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           {topIncomeCategories.map(([category, amount], index) => {
                             const categoryColor = getIncomeCategoryColor(category, index);
                             return (
-                            <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
-                              <div
-                                className="flex-shrink-0"
-                                style={{
-                                  width: '10px',
-                                  height: '10px',
-                                  backgroundColor: categoryColor,
-                                  marginRight: '6px',
-                                  borderRadius: '2px'
-                                }}
-                              />
-                              <span className="flex-1" style={{ color: '#374151', fontWeight: '500' }}>
-                                {getCategoryDisplayName(category as NewCategory)}
-                              </span>
-                              <span style={{ color: '#111827', fontWeight: '600', marginLeft: '8px' }}>
-                                ¥{Math.round(amount).toLocaleString()}
-                              </span>
-                            </div>
+                              <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
+                                <div
+                                  className="flex-shrink-0"
+                                  style={{
+                                    width: '10px',
+                                    height: '10px',
+                                    backgroundColor: categoryColor,
+                                    marginRight: '6px',
+                                    borderRadius: '2px'
+                                  }}
+                                />
+                                <span className="flex-1" style={{ color: '#374151', fontWeight: '500' }}>
+                                  {getCategoryDisplayName(category as NewCategory)}
+                                </span>
+                                <span style={{ color: '#111827', fontWeight: '600', marginLeft: '8px' }}>
+                                  ¥{Math.round(amount).toLocaleString()}
+                                </span>
+                              </div>
                             );
                           })}
                         </div>
@@ -281,13 +274,13 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                             {topExpenseCategories.length > 0 ? (
                               <>
                                 {topExpenseCategories.map(([category, amount], index) => {
-                                  const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
+                                  const percentage = positiveExpenseTotal > 0 ? (amount / positiveExpenseTotal) * 100 : 0;
                                   // Use actual category colors for consistency
                                   const categoryColor = getCategoryColor(category as NewCategory);
                                   const radius = 30;
                                   const circumference = 2 * Math.PI * radius;
                                   const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
-                                  const strokeDashoffset = -topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / totalExpenses) * circumference), 0);
+                                  const strokeDashoffset = -topExpenseCategories.slice(0, index).reduce((acc, [, amt]) => acc + ((amt / positiveExpenseTotal) * circumference), 0);
 
                                   return (
                                     <circle
@@ -335,24 +328,24 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                           {topExpenseCategories.slice(0, 10).map(([category, amount]) => {
                             const categoryColor = getCategoryColor(category as NewCategory);
                             return (
-                            <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
-                              <div
-                                className="flex-shrink-0"
-                                style={{
-                                  width: '10px',
-                                  height: '10px',
-                                  backgroundColor: categoryColor,
-                                  marginRight: '6px',
-                                  borderRadius: '2px'
-                                }}
-                              />
-                              <span className="flex-1" style={{ color: '#374151', fontWeight: '500' }}>
-                                {getCategoryDisplayName(category as NewCategory)}
-                              </span>
-                              <span style={{ color: '#111827', fontWeight: '600', marginLeft: '8px' }}>
-                                ¥{Math.round(amount).toLocaleString()}
-                              </span>
-                            </div>
+                              <div key={category} className="flex items-center" style={{ fontSize: '11px' }}>
+                                <div
+                                  className="flex-shrink-0"
+                                  style={{
+                                    width: '10px',
+                                    height: '10px',
+                                    backgroundColor: categoryColor,
+                                    marginRight: '6px',
+                                    borderRadius: '2px'
+                                  }}
+                                />
+                                <span className="flex-1" style={{ color: '#374151', fontWeight: '500' }}>
+                                  {getCategoryDisplayName(category as NewCategory)}
+                                </span>
+                                <span style={{ color: '#111827', fontWeight: '600', marginLeft: '8px' }}>
+                                  ¥{Math.round(amount).toLocaleString()}
+                                </span>
+                              </div>
                             );
                           })}
                         </div>
@@ -432,137 +425,137 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                             gap: '8px',
                             boxSizing: 'border-box'
                           }}>
-                          {monthlyData.map((data, index) => {
-                            // Calculate bar heights (minimum 8px for visibility)
-                            const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 392, data.income > 0 ? 8 : 4); // Use full 392px height
-                            const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 392, data.expenses > 0 ? 8 : 4);
-                            
-                            // Calculate category segments for expense bar
-                            const categorySegments = Object.entries(data.categoryBreakdown || {})
-                              .sort(([, a], [, b]) => (b as number) - (a as number))
-                              .map(([category, amount]) => ({
-                                category,
-                                amount: amount as number,
-                                height: Math.max(((amount as number) / maxMonthlyAmount) * 392, (amount as number) > 0 ? 2 : 0)
-                              }));
+                            {monthlyData.map((data, index) => {
+                              // Calculate bar heights (minimum 8px for visibility)
+                              const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 392, data.income > 0 ? 8 : 4); // Use full 392px height
+                              const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 392, data.expenses > 0 ? 8 : 4);
 
-                            return (
-                              <div key={index} style={{ 
-                                display: 'flex', 
-                                alignItems: 'flex-end', 
-                                gap: '4px',
-                                padding: '0 4px',
-                                backgroundColor: index % 2 === 0 ? 'rgba(243, 244, 246, 0.3)' : 'transparent',
-                                borderRadius: '6px 6px 0 0', // Only top corners rounded
-                                minWidth: '80px',
-                                flex: '0 0 auto',
-                                height: '100%' // Take full height so bars start from bottom
-                              }}>
-                                {/* Income Bar - Stacked by Category */}
-                                <div style={{
-                                  width: '30px',
-                                  height: `${incomeHeight}px`,
-                                  border: '2px solid #06b6d4',
-                                  borderTopLeftRadius: '6px',
-                                  borderTopRightRadius: '6px',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease',
-                                  minHeight: '4px',
-                                  display: 'flex',
-                                  flexDirection: 'column-reverse',
-                                  overflow: 'hidden',
-                                  position: 'relative'
-                                }} title={`Income: ¥${Math.round(data.income).toLocaleString()}`}>
-                                  {/* Stack income category segments */}
-                                  {Object.entries(data.incomeCategoryBreakdown || {})
-                                    .sort(([, a], [, b]) => (b as number) - (a as number))
-                                    .map(([category, amount], segIndex) => {
-                                      const categoryColor = getIncomeCategoryColor(category, segIndex);
-                                      return (
-                                        <div
-                                          key={segIndex}
-                                          style={{
-                                            width: '100%',
-                                            height: `${Math.max(((amount as number) / maxMonthlyAmount) * 392, (amount as number) > 0 ? 2 : 0)}px`,
-                                            backgroundColor: categoryColor,
-                                            borderTop: segIndex > 0 ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                                            flexShrink: 0
-                                          }}
-                                          title={`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount as number).toLocaleString()}`}
-                                        />
-                                      );
-                                    })}
-                                  {/* Show total on top if there's space */}
-                                  {incomeHeight > 35 && data.income > 0 && (
-                                    <div style={{
-                                      position: 'absolute',
-                                      top: '2px',
-                                      left: '0',
-                                      right: '0',
-                                      textAlign: 'center',
-                                      color: 'white',
-                                      fontSize: '9px',
-                                      fontWeight: 'bold',
-                                      textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                                    }}>
-                                      ¥{Math.round(data.income / 1000)}k
-                                    </div>
-                                  )}
-                                </div>
+                              // Calculate category segments for expense bar
+                              const categorySegments = Object.entries(data.categoryBreakdown || {})
+                                .sort(([, a], [, b]) => (b as number) - (a as number))
+                                .map(([category, amount]) => ({
+                                  category,
+                                  amount: amount as number,
+                                  height: Math.max(((amount as number) / maxMonthlyAmount) * 392, (amount as number) > 0 ? 2 : 0)
+                                }));
 
-                                {/* Expense Bar - Stacked by Category */}
-                                <div style={{
-                                  width: '30px',
-                                  height: `${expenseHeight}px`,
-                                  border: '2px solid #9CA3AF',
-                                  borderTopLeftRadius: '6px',
-                                  borderTopRightRadius: '6px',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease',
-                                  minHeight: '4px',
+                              return (
+                                <div key={index} style={{
                                   display: 'flex',
-                                  flexDirection: 'column-reverse',
-                                  overflow: 'hidden',
-                                  position: 'relative'
-                                }} title={`Expenses: ¥${Math.round(data.expenses).toLocaleString()}`}>
-                                  {/* Stack category segments */}
-                                  {categorySegments.map((segment, segIndex) => (
-                                    <div
-                                      key={segIndex}
-                                      style={{
-                                        width: '100%',
-                                        height: `${segment.height}px`,
-                                        backgroundColor: getCategoryColor(segment.category as NewCategory),
-                                        borderTop: segIndex > 0 ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                                        flexShrink: 0
-                                      }}
-                                      title={`${getCategoryDisplayName(segment.category as NewCategory)}: ¥${Math.round(segment.amount).toLocaleString()}`}
-                                    />
-                                  ))}
-                                  {/* Show total on top if there's space */}
-                                  {expenseHeight > 35 && data.expenses > 0 && (
-                                    <div style={{
-                                      position: 'absolute',
-                                      top: '2px',
-                                      left: '0',
-                                      right: '0',
-                                      textAlign: 'center',
-                                      color: 'white',
-                                      fontSize: '9px',
-                                      fontWeight: 'bold',
-                                      textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                                    }}>
-                                      ¥{Math.round(data.expenses / 1000)}k
-                                    </div>
-                                  )}
+                                  alignItems: 'flex-end',
+                                  gap: '4px',
+                                  padding: '0 4px',
+                                  backgroundColor: index % 2 === 0 ? 'rgba(243, 244, 246, 0.3)' : 'transparent',
+                                  borderRadius: '6px 6px 0 0', // Only top corners rounded
+                                  minWidth: '80px',
+                                  flex: '0 0 auto',
+                                  height: '100%' // Take full height so bars start from bottom
+                                }}>
+                                  {/* Income Bar - Stacked by Category */}
+                                  <div style={{
+                                    width: '30px',
+                                    height: `${incomeHeight}px`,
+                                    border: '2px solid #06b6d4',
+                                    borderTopLeftRadius: '6px',
+                                    borderTopRightRadius: '6px',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    minHeight: '4px',
+                                    display: 'flex',
+                                    flexDirection: 'column-reverse',
+                                    overflow: 'hidden',
+                                    position: 'relative'
+                                  }} title={`Income: ¥${Math.round(data.income).toLocaleString()}`}>
+                                    {/* Stack income category segments */}
+                                    {Object.entries(data.incomeCategoryBreakdown || {})
+                                      .sort(([, a], [, b]) => (b as number) - (a as number))
+                                      .map(([category, amount], segIndex) => {
+                                        const categoryColor = getIncomeCategoryColor(category, segIndex);
+                                        return (
+                                          <div
+                                            key={segIndex}
+                                            style={{
+                                              width: '100%',
+                                              height: `${Math.max(((amount as number) / maxMonthlyAmount) * 392, (amount as number) > 0 ? 2 : 0)}px`,
+                                              backgroundColor: categoryColor,
+                                              borderTop: segIndex > 0 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                                              flexShrink: 0
+                                            }}
+                                            title={`${getCategoryDisplayName(category as NewCategory)}: ¥${Math.round(amount as number).toLocaleString()}`}
+                                          />
+                                        );
+                                      })}
+                                    {/* Show total on top if there's space */}
+                                    {incomeHeight > 35 && data.income > 0 && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '2px',
+                                        left: '0',
+                                        right: '0',
+                                        textAlign: 'center',
+                                        color: 'white',
+                                        fontSize: '9px',
+                                        fontWeight: 'bold',
+                                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                                      }}>
+                                        ¥{Math.round(data.income / 1000)}k
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Expense Bar - Stacked by Category */}
+                                  <div style={{
+                                    width: '30px',
+                                    height: `${expenseHeight}px`,
+                                    border: '2px solid #9CA3AF',
+                                    borderTopLeftRadius: '6px',
+                                    borderTopRightRadius: '6px',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    minHeight: '4px',
+                                    display: 'flex',
+                                    flexDirection: 'column-reverse',
+                                    overflow: 'hidden',
+                                    position: 'relative'
+                                  }} title={`Expenses: ¥${Math.round(data.expenses).toLocaleString()}`}>
+                                    {/* Stack category segments */}
+                                    {categorySegments.map((segment, segIndex) => (
+                                      <div
+                                        key={segIndex}
+                                        style={{
+                                          width: '100%',
+                                          height: `${segment.height}px`,
+                                          backgroundColor: getCategoryColor(segment.category as NewCategory),
+                                          borderTop: segIndex > 0 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                                          flexShrink: 0
+                                        }}
+                                        title={`${getCategoryDisplayName(segment.category as NewCategory)}: ¥${Math.round(segment.amount).toLocaleString()}`}
+                                      />
+                                    ))}
+                                    {/* Show total on top if there's space */}
+                                    {expenseHeight > 35 && data.expenses > 0 && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '2px',
+                                        left: '0',
+                                        right: '0',
+                                        textAlign: 'center',
+                                        color: 'white',
+                                        fontSize: '9px',
+                                        fontWeight: 'bold',
+                                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                                      }}>
+                                        ¥{Math.round(data.expenses / 1000)}k
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
                           </div>
-                          
+
                           {/* X-axis labels area - inside the scrollable container */}
                           <div style={{
                             display: 'flex',
@@ -573,7 +566,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                             borderTop: '2px solid #E5E7EB'
                           }}>
                             {monthlyData.map((data, index) => (
-                              <div key={index} style={{ 
+                              <div key={index} style={{
                                 minWidth: '80px',
                                 textAlign: 'center',
                                 flex: '0 0 auto',
