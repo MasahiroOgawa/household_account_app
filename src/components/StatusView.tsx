@@ -39,6 +39,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
   const positiveIncomeTotal = topIncomeCategories.reduce((sum, [, amount]) => sum + amount, 0);
 
 
+
   // Expense category breakdown
   const expenseCategories = filteredTransactions
     .filter(t => t.type === 'expense')
