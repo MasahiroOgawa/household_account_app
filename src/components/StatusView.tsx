@@ -3,7 +3,7 @@ import { Transaction } from '../types/Transaction';
 import { BarChart3, PieChart } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
 import { calculateMonthlyTotals } from '../utils/monthlyCalculations';
-import { getCategoryColor, getCategoryDisplayName, getIncomeCategoryColor, NewCategory } from '../utils/categoryHelpers';
+import { getCategoryColor, getCategoryDisplayName, getCategoryType, getIncomeCategoryColor, NewCategory } from '../utils/categoryHelpers';
 
 interface StatusViewProps {
   transactions: Transaction[];
@@ -30,9 +30,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
       return acc;
     }, {} as Record<string, number>);
 
-  // Filter to only positive amounts and calculate total for pie chart
+  // Filter to only positive amounts and exclude expense-type categories
   const topIncomeCategories = Object.entries(incomeCategories)
-    .filter(([, amount]) => amount > 0)  // Only show positive amounts in pie chart
+    .filter(([category, amount]) => amount > 0 && getCategoryType(category) !== 'expense')
     .sort(([, a], [, b]) => b - a);
 
   // Calculate positive income total for pie chart percentages
@@ -48,13 +48,14 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
       return acc;
     }, {} as Record<string, number>);
 
-  // Filter to only positive amounts
+  // Filter to only positive amounts and exclude income-type categories
   const topExpenseCategories = Object.entries(expenseCategories)
-    .filter(([, amount]) => amount > 0)  // Only show positive amounts in pie chart
+    .filter(([category, amount]) => amount > 0 && getCategoryType(category) !== 'income')
     .sort(([, a], [, b]) => b - a);
 
   // Calculate positive expense total for pie chart percentages
   const positiveExpenseTotal = topExpenseCategories.reduce((sum, [, amount]) => sum + amount, 0);
+
 
 
   // Monthly breakdown for the previous 12 months
