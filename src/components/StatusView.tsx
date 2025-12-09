@@ -3,7 +3,7 @@ import { Transaction } from '../types/Transaction';
 import { BarChart3, PieChart } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
 import { calculateMonthlyTotals } from '../utils/monthlyCalculations';
-import { getCategoryColor, getCategoryDisplayName, getCategoryType, getIncomeCategoryColor, NewCategory } from '../utils/categoryHelpers';
+import { getCategoryColor, getCategoryDisplayName, getIncomeCategoryColor, NewCategory } from '../utils/categoryHelpers';
 
 interface StatusViewProps {
   transactions: Transaction[];
@@ -30,9 +30,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
       return acc;
     }, {} as Record<string, number>);
 
-  // Filter to only positive amounts and exclude expense-type categories
+  // Filter to only positive amounts for pie chart display
   const topIncomeCategories = Object.entries(incomeCategories)
-    .filter(([category, amount]) => amount > 0 && getCategoryType(category) !== 'expense')
+    .filter(([, amount]) => amount > 0)
     .sort(([, a], [, b]) => b - a);
 
   // Calculate positive income total for pie chart percentages
@@ -48,9 +48,9 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
       return acc;
     }, {} as Record<string, number>);
 
-  // Filter to only positive amounts and exclude income-type categories
+  // Filter to only positive amounts for pie chart display
   const topExpenseCategories = Object.entries(expenseCategories)
-    .filter(([category, amount]) => amount > 0 && getCategoryType(category) !== 'income')
+    .filter(([, amount]) => amount > 0)
     .sort(([, a], [, b]) => b - a);
 
   // Calculate positive expense total for pie chart percentages
@@ -431,14 +431,19 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                               const incomeHeight = Math.max((data.income / maxMonthlyAmount) * 392, data.income > 0 ? 8 : 4); // Use full 392px height
                               const expenseHeight = Math.max((data.expenses / maxMonthlyAmount) * 392, data.expenses > 0 ? 8 : 4);
 
-                              // Calculate category segments for expense bar
+                              // Calculate category segments for expense bar - filter positive amounts only
                               const categorySegments = Object.entries(data.categoryBreakdown || {})
+                                .filter(([, amount]) => (amount as number) > 0)
                                 .sort(([, a], [, b]) => (b as number) - (a as number))
                                 .map(([category, amount]) => ({
                                   category,
                                   amount: amount as number,
-                                  height: Math.max(((amount as number) / maxMonthlyAmount) * 392, (amount as number) > 0 ? 2 : 0)
+                                  height: Math.max(((amount as number) / maxMonthlyAmount) * 392, 2)
                                 }));
+
+                              // Calculate actual positive expense total for bar height
+                              const positiveExpenseSum = categorySegments.reduce((sum, seg) => sum + seg.amount, 0);
+                              const adjustedExpenseHeight = Math.max((positiveExpenseSum / maxMonthlyAmount) * 392, positiveExpenseSum > 0 ? 8 : 4);
 
                               return (
                                 <div key={index} style={{
@@ -508,7 +513,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                   {/* Expense Bar - Stacked by Category */}
                                   <div style={{
                                     width: '30px',
-                                    height: `${expenseHeight}px`,
+                                    height: `${adjustedExpenseHeight}px`,
                                     border: '2px solid #9CA3AF',
                                     borderTopLeftRadius: '6px',
                                     borderTopRightRadius: '6px',
@@ -520,7 +525,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                     flexDirection: 'column-reverse',
                                     overflow: 'hidden',
                                     position: 'relative'
-                                  }} title={`Expenses: ¥${Math.round(data.expenses).toLocaleString()}`}>
+                                  }} title={`Expenses: ¥${Math.round(positiveExpenseSum).toLocaleString()}`}>
                                     {/* Stack category segments */}
                                     {categorySegments.map((segment, segIndex) => (
                                       <div
@@ -536,7 +541,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                       />
                                     ))}
                                     {/* Show total on top if there's space */}
-                                    {expenseHeight > 35 && data.expenses > 0 && (
+                                    {adjustedExpenseHeight > 35 && positiveExpenseSum > 0 && (
                                       <div style={{
                                         position: 'absolute',
                                         top: '2px',
@@ -548,7 +553,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                                         fontWeight: 'bold',
                                         textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                                       }}>
-                                        ¥{Math.round(data.expenses / 1000)}k
+                                        ¥{Math.round(positiveExpenseSum / 1000)}k
                                       </div>
                                     )}
                                   </div>
