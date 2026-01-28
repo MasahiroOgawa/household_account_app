@@ -55,10 +55,10 @@ describe('Monthly Totals Consistency Integration Tests', () => {
       expect(mayTotals.expenses).toBe(670430);
 
       // Check StatusView shows correct May totals
-      // The bar chart should show these values
+      // The bar chart shows values in k (rounded), e.g. ¥839k for 838747
       const statusViewContent = statusView.container.textContent || '';
-      expect(statusViewContent).toContain('838'); // Income in thousands
-      expect(statusViewContent).toContain('670'); // Expenses in thousands
+      expect(statusViewContent).toContain('839k'); // Income in thousands (rounded)
+      expect(statusViewContent).toContain('670k'); // Expenses in thousands
 
       // Check TransactionTable shows correct May totals
       const transactionTableContent = transactionTable.container.textContent || '';
@@ -140,13 +140,15 @@ describe('Monthly Totals Consistency Integration Tests', () => {
       const totalIncome = 4500000; // 1M + 2M + 1.5M
       const totalExpenses = 2250000; // 500k + 1M + 750k
 
-      // StatusView legend shows totals
-      expect(statusView.getByText(`Total: ¥${totalIncome.toLocaleString()}`)).toBeInTheDocument();
-      expect(statusView.getByText(`Total: ¥${totalExpenses.toLocaleString()}`)).toBeInTheDocument();
+      // StatusView pie chart center shows totals in thousands
+      const statusContent = statusView.container.textContent || '';
+      expect(statusContent).toContain(`¥${Math.round(totalIncome / 1000)}k`);
+      expect(statusContent).toContain(`¥${Math.round(totalExpenses / 1000)}k`);
 
       // TransactionTable summary cards show totals
-      expect(transactionTable.getByText(`¥${totalIncome.toLocaleString()}`)).toBeInTheDocument();
-      expect(transactionTable.getByText(`¥${totalExpenses.toLocaleString()}`)).toBeInTheDocument();
+      const tableContent = transactionTable.container.textContent || '';
+      expect(tableContent).toContain('¥4,500,000');
+      expect(tableContent).toContain('¥2,250,000');
 
       // Clean up
       statusView.unmount();

@@ -69,13 +69,13 @@ describe('StatusView', () => {
         createMockTransaction('2024-06-15', 300000, 'expense'),
       ];
 
-      render(<StatusView transactions={transactions} />);
+      const { container } = render(<StatusView transactions={transactions} />);
 
-      // Legend shows formatted totals
-      // Total income: 1000000 + 500000 = 1500000
-      // Total expenses: 800000 + 300000 = 1100000
-      expect(screen.getByText(/Total: ¥1,500,000/)).toBeInTheDocument();
-      expect(screen.getByText(/Total: ¥1,100,000/)).toBeInTheDocument();
+      // Pie chart center labels show totals in thousands
+      // Total income: 1000000 + 500000 = 1500000 → ¥1500k
+      // Total expenses: 800000 + 300000 = 1100000 → ¥1100k
+      expect(container.textContent).toContain('¥1500k');
+      expect(container.textContent).toContain('¥1100k');
     });
   });
 
