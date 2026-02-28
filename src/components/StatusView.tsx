@@ -17,7 +17,8 @@ const aggregateByCategory = (transactions: Transaction[], type: 'income' | 'expe
   const categories = transactions
     .filter(t => t.type === type)
     .reduce((acc, t) => {
-      const normalized = t.category.toLowerCase().trim();
+      const defaultCategory = type === 'income' ? 'other_income' : 'other_expense';
+      const normalized = (t.category || defaultCategory).toLowerCase().trim();
       acc[normalized] = (acc[normalized] || 0) + t.amount;
       return acc;
     }, {} as Record<string, number>);
@@ -62,7 +63,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     const categoryBreakdown = monthTransactions
       .filter(t => t.type === 'expense')
       .reduce((acc, t) => {
-        const k = t.category.toLowerCase().trim();
+        const k = (t.category || 'other_expense').toLowerCase().trim();
         acc[k] = (acc[k] || 0) + t.amount;
         return acc;
       }, {} as Record<string, number>);
@@ -70,7 +71,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     const incomeCategoryBreakdown = monthTransactions
       .filter(t => t.type === 'income')
       .reduce((acc, t) => {
-        const k = t.category.toLowerCase().trim();
+        const k = (t.category || 'other_income').toLowerCase().trim();
         acc[k] = (acc[k] || 0) + t.amount;
         return acc;
       }, {} as Record<string, number>);

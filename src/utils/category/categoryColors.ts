@@ -33,6 +33,7 @@ export const categoryDisplayInfo: Record<string, CategoryDisplayInfo> = {
   'internal_transfer': { name: 'Internal Transfer', color: '#64748b', type: 'expense' },
   'transit': { name: 'Transit', color: '#ea580c', type: 'expense' },
   'tax': { name: 'Tax', color: '#991b1b', type: 'expense' },
+  'credit_card_payment': { name: 'Credit Card Payment', color: '#a855f7', type: 'expense' },
   'other_expense': { name: 'Other Expense', color: '#7f1d1d', type: 'expense' },
 
   // Japanese expense
