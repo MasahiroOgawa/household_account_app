@@ -11,8 +11,14 @@ class ConfigLoader {
   private columnMapping: ColumnMapping;
 
   constructor() {
-    this.categoryMapping = categoryMappingDefault as CategoryMapping;
-    this.columnMapping = columnMappingData as ColumnMapping;
+    const storedCategory = localStorage.getItem('categoryMapping');
+    this.categoryMapping = storedCategory
+      ? JSON.parse(storedCategory)
+      : (categoryMappingDefault as CategoryMapping);
+    const storedColumn = localStorage.getItem('columnMapping');
+    this.columnMapping = storedColumn
+      ? JSON.parse(storedColumn)
+      : (columnMappingData as ColumnMapping);
   }
 
   getCategoryMapping(): CategoryMapping {

@@ -7,13 +7,14 @@ import { parseCSVFiles } from '../utils/parsing/csvParser';
 import { detectAndMergeDuplicates } from '../utils/duplicateDetector';
 import { exportTransactionsToCSV } from '../utils/csvExporter';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
+import { CategoryEditor } from './CategoryEditor';
 
 interface DashboardProps {
   user: User;
   onLogout: () => void;
 }
 
-type ViewMode = 'main' | 'upload' | 'status';
+type ViewMode = 'main' | 'upload' | 'status' | 'categories';
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -82,6 +83,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         );
       case 'status':
         return <StatusView transactions={transactions} />;
+      case 'categories':
+        return <CategoryEditor />;
       case 'main':
       default:
         return <TransactionTable transactions={transactions} onExport={handleExport} />;
@@ -139,6 +142,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               View Stats
             </button>
           )}
+
+          <button
+            onClick={() => setCurrentView('categories')}
+            className={`px-6 py-2 text-sm font-medium rounded-t-lg transition-all ml-2 ${
+              currentView === 'categories'
+                ? 'bg-gray-300 text-black border-2 border-black shadow-[inset_0_-2px_4px_rgba(0,0,0,0.3)] -mb-[2px] relative z-10'
+                : 'bg-gray-200 text-black border-2 border-gray-400 shadow-[0_2px_4px_rgba(0,0,0,0.2)] hover:bg-gray-300 hover:shadow-[0_1px_2px_rgba(0,0,0,0.2)] hover:translate-y-[1px]'
+            }`}
+          >
+            Categories
+          </button>
 
           <button
             onClick={onLogout}

@@ -2,23 +2,32 @@ import { configLoader } from '../config/configLoader';
 
 const normalizeWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
 
+const resolveMappingValue = (
+  value: string | { income: string; expense: string },
+  transactionType?: 'income' | 'expense'
+): string => {
+  if (typeof value === 'string') return value;
+  return transactionType === 'income' ? value.income : value.expense;
+};
+
 export const detectCategory = (description: string, transactionType?: 'income' | 'expense'): string => {
   const mapping = configLoader.getCategoryMapping();
   const normalizedDescription = normalizeWhitespace(description);
 
   // Exact match
   if (mapping.mappings[description]) {
-    const mappedCategory = mapping.mappings[description];
-    if (mapping.subcategories && mapping.subcategories[mappedCategory]) {
-      return mapping.subcategories[mappedCategory];
+    const rawCategory = resolveMappingValue(mapping.mappings[description], transactionType);
+    if (mapping.subcategories && mapping.subcategories[rawCategory]) {
+      return mapping.subcategories[rawCategory];
     }
-    return mappedCategory;
+    return rawCategory;
   }
 
   // Prefix match (handles cases like "三菱ＮＦＪ銀行 三島支店 普通預金...")
-  for (const [keyword, category] of Object.entries(mapping.mappings)) {
+  for (const [keyword, value] of Object.entries(mapping.mappings)) {
     const normalizedKeyword = normalizeWhitespace(keyword);
     if (normalizedDescription.startsWith(normalizedKeyword)) {
+      const category = resolveMappingValue(value, transactionType);
       if (mapping.subcategories && mapping.subcategories[category]) {
         return mapping.subcategories[category];
       }
@@ -28,9 +37,10 @@ export const detectCategory = (description: string, transactionType?: 'income' |
 
   // Partial match (contains)
   const lowerDescription = normalizedDescription.toLowerCase();
-  for (const [keyword, category] of Object.entries(mapping.mappings)) {
+  for (const [keyword, value] of Object.entries(mapping.mappings)) {
     const normalizedKeyword = normalizeWhitespace(keyword).toLowerCase();
     if (lowerDescription.includes(normalizedKeyword)) {
+      const category = resolveMappingValue(value, transactionType);
       if (mapping.subcategories && mapping.subcategories[category]) {
         return mapping.subcategories[category];
       }
