@@ -1,23 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { Settings, Search, Save, RotateCcw } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Settings, Search, Save, RotateCcw, Check } from 'lucide-react';
 import { configLoader } from '../utils/config/configLoader';
 import { getCategoryDisplayName } from '../utils/category/categoryDisplay';
 import { getCategoryColor } from '../utils/category/categoryColors';
 
 type MappingValue = string | { income: string; expense: string };
 
-const resolveForType = (
-  value: MappingValue,
-  type: 'income' | 'expense',
-  subcategories: Record<string, string>
-): string => {
-  const raw = typeof value === 'string' ? value : value[type];
-  return subcategories[raw] || raw;
-};
-
 const CategoryBadge: React.FC<{ category: string }> = ({ category }) => (
   <span
-    className="inline-block px-2 py-0.5 rounded text-xs font-medium text-white"
+    className="inline-block px-2 py-0.5 rounded text-xs font-medium text-white whitespace-nowrap"
     style={{ backgroundColor: getCategoryColor(category) }}
   >
     {getCategoryDisplayName(category)}
@@ -25,7 +16,7 @@ const CategoryBadge: React.FC<{ category: string }> = ({ category }) => (
 );
 
 export const CategoryEditor: React.FC = () => {
-  const categoryMapping = configLoader.getCategoryMapping();
+  const [categoryMapping, setCategoryMapping] = useState(() => configLoader.getCategoryMapping());
   const subcategories = useMemo(
     () => categoryMapping.subcategories || {},
     [categoryMapping.subcategories]
@@ -37,45 +28,36 @@ export const CategoryEditor: React.FC = () => {
   const [filterMode, setFilterMode] = useState<'others' | 'all'>('others');
   const [searchQuery, setSearchQuery] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const incomeCategories = useMemo(() => {
+  // Build dropdown options: subcategory keys + main categories
+  const dropdownOptions = useMemo(() => {
+    const subcatKeys = Object.keys(subcategories);
     const categories = categoryMapping.categories as { income?: string[]; expense?: string[] };
-    return Array.isArray(categories.income) ? categories.income : [];
-  }, [categoryMapping.categories]);
+    const mainCats = [
+      ...(Array.isArray(categories.income) ? categories.income : []),
+      ...(Array.isArray(categories.expense) ? categories.expense : []),
+    ];
+    return [...new Set([...subcatKeys, ...mainCats])].sort();
+  }, [subcategories, categoryMapping.categories]);
 
-  const expenseCategories = useMemo(() => {
-    const categories = categoryMapping.categories as { income?: string[]; expense?: string[] };
-    return Array.isArray(categories.expense) ? categories.expense : [];
-  }, [categoryMapping.categories]);
-
-  const allIncomeOptions = useMemo(() => {
-    const set = new Set(incomeCategories);
-    Object.entries(subcategories).forEach(([key, val]) => {
-      if (incomeCategories.includes(val)) set.add(key);
-    });
-    return [...set].sort();
-  }, [incomeCategories, subcategories]);
-
-  const allExpenseOptions = useMemo(() => {
-    const set = new Set(expenseCategories);
-    Object.entries(subcategories).forEach(([key, val]) => {
-      if (expenseCategories.includes(val)) set.add(key);
-    });
-    return [...set].sort();
-  }, [expenseCategories, subcategories]);
+  const resolveCategory = useCallback(
+    (raw: string) => subcategories[raw] || raw,
+    [subcategories]
+  );
 
   const filteredEntries = useMemo(() => {
     let entries = Object.entries(mappings);
 
     if (filterMode === 'others') {
       entries = entries.filter(([, value]) => {
-        const incResolved = resolveForType(value, 'income', subcategories);
-        const expResolved = resolveForType(value, 'expense', subcategories);
+        const incRaw = typeof value === 'string' ? value : value.income;
+        const expRaw = typeof value === 'string' ? value : value.expense;
+        const incResolved = resolveCategory(incRaw);
+        const expResolved = resolveCategory(expRaw);
         return (
-          incResolved === 'other_income' ||
-          incResolved === 'other_expense' ||
-          expResolved === 'other_income' ||
-          expResolved === 'other_expense'
+          incResolved === 'other_income' || incResolved === 'other_expense' ||
+          expResolved === 'other_income' || expResolved === 'other_expense'
         );
       });
     }
@@ -88,7 +70,7 @@ export const CategoryEditor: React.FC = () => {
     }
 
     return entries.sort(([a], [b]) => a.localeCompare(b));
-  }, [mappings, filterMode, searchQuery, subcategories]);
+  }, [mappings, filterMode, searchQuery, resolveCategory]);
 
   const handleChange = (
     merchant: string,
@@ -104,23 +86,27 @@ export const CategoryEditor: React.FC = () => {
       const expNew = type === 'expense' ? newCategory : expCurrent;
 
       const newValue: MappingValue = incNew === expNew ? incNew : { income: incNew, expense: expNew };
-
       return { ...prev, [merchant]: newValue };
     });
     setHasUnsavedChanges(true);
+    setSaveSuccess(false);
   };
 
   const handleSave = () => {
-    configLoader.saveCategoryMapping({
-      ...categoryMapping,
-      mappings,
-    });
+    const updated = { ...categoryMapping, mappings };
+    configLoader.saveCategoryMapping(updated);
+    setCategoryMapping(updated);
     setHasUnsavedChanges(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   const handleDiscard = () => {
-    setMappings({ ...categoryMapping.mappings });
+    const current = configLoader.getCategoryMapping();
+    setMappings({ ...current.mappings });
+    setCategoryMapping(current);
     setHasUnsavedChanges(false);
+    setSaveSuccess(false);
   };
 
   return (
@@ -131,13 +117,12 @@ export const CategoryEditor: React.FC = () => {
           <h2 className="text-2xl font-bold text-black">Category Mapping Editor</h2>
         </div>
         <p className="text-sm text-gray-600">
-          Assign categories to merchant descriptions. Each merchant can have different categories for income and expense transactions.
+          Assign subcategories to merchant descriptions. Each merchant can have different subcategories for income and expense. Subcategories are automatically grouped into main categories.
         </p>
       </div>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        {/* Filter toggle */}
         <div className="flex border-2 border-black rounded overflow-hidden">
           <button
             onClick={() => setFilterMode('others')}
@@ -161,7 +146,6 @@ export const CategoryEditor: React.FC = () => {
           </button>
         </div>
 
-        {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -173,13 +157,16 @@ export const CategoryEditor: React.FC = () => {
           />
         </div>
 
-        {/* Count badge */}
         <span className="px-3 py-1 bg-gray-200 border-2 border-black rounded text-sm font-medium">
           {filteredEntries.length} items
         </span>
 
-        {/* Save / Discard */}
-        <div className="flex gap-2 ml-auto">
+        <div className="flex gap-2 ml-auto items-center">
+          {saveSuccess && (
+            <span className="flex items-center gap-1 text-green-700 text-sm font-medium">
+              <Check className="w-4 h-4" /> Saved
+            </span>
+          )}
           <button
             onClick={handleDiscard}
             disabled={!hasUnsavedChanges}
@@ -195,10 +182,10 @@ export const CategoryEditor: React.FC = () => {
           <button
             onClick={handleSave}
             disabled={!hasUnsavedChanges}
-            className={`flex items-center gap-1 px-4 py-1.5 text-sm font-medium border-2 border-black rounded transition-all ${
+            className={`flex items-center gap-1 px-5 py-2 text-sm font-bold border-2 border-black rounded transition-all ${
               hasUnsavedChanges
-                ? 'bg-yellow-300 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px]'
-                : 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                ? 'bg-yellow-300 text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px]'
+                : 'bg-yellow-100 text-gray-400 border-gray-300 cursor-not-allowed'
             }`}
           >
             <Save className="w-4 h-4" />
@@ -213,16 +200,16 @@ export const CategoryEditor: React.FC = () => {
           <thead className="bg-gray-100 sticky top-0 z-10">
             <tr>
               <th className="text-left px-3 py-2 border-b-2 border-black font-semibold">Merchant</th>
-              <th className="text-left px-3 py-2 border-b-2 border-black font-semibold w-56">Income Category</th>
-              <th className="text-left px-3 py-2 border-b-2 border-black font-semibold w-56">Expense Category</th>
+              <th className="text-left px-3 py-2 border-b-2 border-black font-semibold w-56">Income Subcategory</th>
+              <th className="text-left px-3 py-2 border-b-2 border-black font-semibold w-56">Expense Subcategory</th>
             </tr>
           </thead>
           <tbody>
             {filteredEntries.map(([merchant, value]) => {
               const incRaw = typeof value === 'string' ? value : value.income;
               const expRaw = typeof value === 'string' ? value : value.expense;
-              const incResolved = subcategories[incRaw] || incRaw;
-              const expResolved = subcategories[expRaw] || expRaw;
+              const incResolved = resolveCategory(incRaw);
+              const expResolved = resolveCategory(expRaw);
 
               return (
                 <tr key={merchant} className="border-b border-gray-200 hover:bg-yellow-50">
@@ -234,11 +221,10 @@ export const CategoryEditor: React.FC = () => {
                         onChange={e => handleChange(merchant, 'income', e.target.value)}
                         className="border border-gray-300 rounded px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-yellow-300"
                       >
-                        {allIncomeOptions.map(cat => (
+                        {dropdownOptions.map(cat => (
                           <option key={cat} value={cat}>{getCategoryDisplayName(cat)}</option>
                         ))}
-                        {/* If current value is not in income options, still show it */}
-                        {!allIncomeOptions.includes(incRaw) && (
+                        {!dropdownOptions.includes(incRaw) && (
                           <option value={incRaw}>{getCategoryDisplayName(incRaw)}</option>
                         )}
                       </select>
@@ -252,10 +238,10 @@ export const CategoryEditor: React.FC = () => {
                         onChange={e => handleChange(merchant, 'expense', e.target.value)}
                         className="border border-gray-300 rounded px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-yellow-300"
                       >
-                        {allExpenseOptions.map(cat => (
+                        {dropdownOptions.map(cat => (
                           <option key={cat} value={cat}>{getCategoryDisplayName(cat)}</option>
                         ))}
-                        {!allExpenseOptions.includes(expRaw) && (
+                        {!dropdownOptions.includes(expRaw) && (
                           <option value={expRaw}>{getCategoryDisplayName(expRaw)}</option>
                         )}
                       </select>
