@@ -1,4 +1,5 @@
 import { configLoader } from '../config/configLoader';
+import { CategoryMapping } from '../../types/Category';
 
 const normalizeWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
 
@@ -10,15 +11,30 @@ const resolveMappingValue = (
   return transactionType === 'income' ? value.income : value.expense;
 };
 
+type SplitSubcategories = { income: Record<string, string>; expense: Record<string, string> };
+
+const getSubcategoryMap = (
+  subcategories: CategoryMapping['subcategories'],
+  transactionType?: 'income' | 'expense'
+): Record<string, string> => {
+  if (!subcategories) return {};
+  if ('income' in subcategories && 'expense' in subcategories) {
+    const split = subcategories as SplitSubcategories;
+    return transactionType === 'income' ? split.income : split.expense;
+  }
+  return subcategories as Record<string, string>;
+};
+
 export const detectCategory = (description: string, transactionType?: 'income' | 'expense'): string => {
   const mapping = configLoader.getCategoryMapping();
   const normalizedDescription = normalizeWhitespace(description);
+  const subcatMap = getSubcategoryMap(mapping.subcategories, transactionType);
 
   // Exact match
   if (mapping.mappings[description]) {
     const rawCategory = resolveMappingValue(mapping.mappings[description], transactionType);
-    if (mapping.subcategories && mapping.subcategories[rawCategory]) {
-      return mapping.subcategories[rawCategory];
+    if (subcatMap[rawCategory]) {
+      return subcatMap[rawCategory];
     }
     return rawCategory;
   }
@@ -28,8 +44,8 @@ export const detectCategory = (description: string, transactionType?: 'income' |
     const normalizedKeyword = normalizeWhitespace(keyword);
     if (normalizedDescription.startsWith(normalizedKeyword)) {
       const category = resolveMappingValue(value, transactionType);
-      if (mapping.subcategories && mapping.subcategories[category]) {
-        return mapping.subcategories[category];
+      if (subcatMap[category]) {
+        return subcatMap[category];
       }
       return category;
     }
@@ -41,8 +57,8 @@ export const detectCategory = (description: string, transactionType?: 'income' |
     const normalizedKeyword = normalizeWhitespace(keyword).toLowerCase();
     if (lowerDescription.includes(normalizedKeyword)) {
       const category = resolveMappingValue(value, transactionType);
-      if (mapping.subcategories && mapping.subcategories[category]) {
-        return mapping.subcategories[category];
+      if (subcatMap[category]) {
+        return subcatMap[category];
       }
       return category;
     }

@@ -104,9 +104,17 @@
     "ホームセンター": "日用品"
   },
   "subcategories": {
-    "コンビニ": "食費",
-    "銀行振込": "振込",
-    "電子マネー": "その他"
+    "income": {
+      "売上": "revenue",
+      "雑収入": "other_income",
+      "salary": "salary",
+      "revenue": "revenue"
+    },
+    "expense": {
+      "コンビニ": "食費",
+      "銀行振込": "振込",
+      "電子マネー": "その他"
+    }
   },
   "defaultCategory": {
     "income": "その他収入",
@@ -115,6 +123,7 @@
   "categories": {
     "income": {
       "salary": { "name": "給与", "color": "#10B981" },
+      "revenue": { "name": "売上", "color": "#0ea5e9" },
       "bonus": { "name": "賞与", "color": "#059669" },
       "investment": { "name": "投資収益", "color": "#34D399" },
       "interest": { "name": "利息", "color": "#6EE7B7" },

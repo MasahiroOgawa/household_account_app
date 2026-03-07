@@ -17,10 +17,18 @@ const CategoryBadge: React.FC<{ category: string }> = ({ category }) => (
 
 export const CategoryEditor: React.FC = () => {
   const [categoryMapping, setCategoryMapping] = useState(() => configLoader.getCategoryMapping());
-  const subcategories = useMemo(
-    () => categoryMapping.subcategories || {},
-    [categoryMapping.subcategories]
-  );
+  type SplitSubs = { income: Record<string, string>; expense: Record<string, string> };
+  const emptySubs = {} as Record<string, string>;
+  const { incomeSubcategories, expenseSubcategories } = useMemo(() => {
+    const subs = categoryMapping.subcategories;
+    if (!subs) return { incomeSubcategories: emptySubs, expenseSubcategories: emptySubs };
+    if ('income' in subs && 'expense' in subs) {
+      const split = subs as SplitSubs;
+      return { incomeSubcategories: split.income, expenseSubcategories: split.expense };
+    }
+    const flat = subs as Record<string, string>;
+    return { incomeSubcategories: flat, expenseSubcategories: flat };
+  }, [categoryMapping.subcategories]);
 
   const [mappings, setMappings] = useState<Record<string, MappingValue>>(
     () => ({ ...categoryMapping.mappings })
@@ -30,20 +38,23 @@ export const CategoryEditor: React.FC = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Build dropdown options: subcategory keys + main categories
-  const dropdownOptions = useMemo(() => {
-    const subcatKeys = Object.keys(subcategories);
+  // Build dropdown options split by income/expense
+  const { incomeDropdownOptions, expenseDropdownOptions } = useMemo(() => {
     const categories = categoryMapping.categories as { income?: string[]; expense?: string[] };
-    const mainCats = [
-      ...(Array.isArray(categories.income) ? categories.income : []),
-      ...(Array.isArray(categories.expense) ? categories.expense : []),
-    ];
-    return [...new Set([...subcatKeys, ...mainCats])].sort();
-  }, [subcategories, categoryMapping.categories]);
+    const incomeMainCats = Array.isArray(categories.income) ? categories.income : [];
+    const expenseMainCats = Array.isArray(categories.expense) ? categories.expense : [];
+    return {
+      incomeDropdownOptions: [...new Set([...Object.keys(incomeSubcategories), ...incomeMainCats])].sort(),
+      expenseDropdownOptions: [...new Set([...Object.keys(expenseSubcategories), ...expenseMainCats])].sort(),
+    };
+  }, [incomeSubcategories, expenseSubcategories, categoryMapping.categories]);
 
   const resolveCategory = useCallback(
-    (raw: string) => subcategories[raw] || raw,
-    [subcategories]
+    (raw: string, type: 'income' | 'expense') => {
+      const subcatMap = type === 'income' ? incomeSubcategories : expenseSubcategories;
+      return subcatMap[raw] || raw;
+    },
+    [incomeSubcategories, expenseSubcategories]
   );
 
   const filteredEntries = useMemo(() => {
@@ -53,8 +64,8 @@ export const CategoryEditor: React.FC = () => {
       entries = entries.filter(([, value]) => {
         const incRaw = typeof value === 'string' ? value : value.income;
         const expRaw = typeof value === 'string' ? value : value.expense;
-        const incResolved = resolveCategory(incRaw);
-        const expResolved = resolveCategory(expRaw);
+        const incResolved = resolveCategory(incRaw, 'income');
+        const expResolved = resolveCategory(expRaw, 'expense');
         return (
           incResolved === 'other_income' || incResolved === 'other_expense' ||
           expResolved === 'other_income' || expResolved === 'other_expense'
@@ -208,8 +219,8 @@ export const CategoryEditor: React.FC = () => {
             {filteredEntries.map(([merchant, value]) => {
               const incRaw = typeof value === 'string' ? value : value.income;
               const expRaw = typeof value === 'string' ? value : value.expense;
-              const incResolved = resolveCategory(incRaw);
-              const expResolved = resolveCategory(expRaw);
+              const incResolved = resolveCategory(incRaw, 'income');
+              const expResolved = resolveCategory(expRaw, 'expense');
 
               return (
                 <tr key={merchant} className="border-b border-gray-200 hover:bg-yellow-50">
@@ -221,10 +232,10 @@ export const CategoryEditor: React.FC = () => {
                         onChange={e => handleChange(merchant, 'income', e.target.value)}
                         className="border border-gray-300 rounded px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-yellow-300"
                       >
-                        {dropdownOptions.map(cat => (
+                        {incomeDropdownOptions.map(cat => (
                           <option key={cat} value={cat}>{getCategoryDisplayName(cat)}</option>
                         ))}
-                        {!dropdownOptions.includes(incRaw) && (
+                        {!incomeDropdownOptions.includes(incRaw) && (
                           <option value={incRaw}>{getCategoryDisplayName(incRaw)}</option>
                         )}
                       </select>
@@ -238,10 +249,10 @@ export const CategoryEditor: React.FC = () => {
                         onChange={e => handleChange(merchant, 'expense', e.target.value)}
                         className="border border-gray-300 rounded px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-yellow-300"
                       >
-                        {dropdownOptions.map(cat => (
+                        {expenseDropdownOptions.map(cat => (
                           <option key={cat} value={cat}>{getCategoryDisplayName(cat)}</option>
                         ))}
-                        {!dropdownOptions.includes(expRaw) && (
+                        {!expenseDropdownOptions.includes(expRaw) && (
                           <option value={expRaw}>{getCategoryDisplayName(expRaw)}</option>
                         )}
                       </select>

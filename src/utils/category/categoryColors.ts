@@ -6,6 +6,7 @@ export const categoryDisplayInfo: Record<string, CategoryDisplayInfo> = {
   'company_refund': { name: 'Company Refund', color: '#60a5fa', type: 'income' },
   'country_refund': { name: 'Country/Tax Refund', color: '#2563eb', type: 'income' },
   'withdraw': { name: 'Withdraw', color: '#93c5fd', type: 'income' },
+  'revenue': { name: 'Revenue', color: '#0ea5e9', type: 'income' },
   'other_income': { name: 'Other Income', color: '#1d4ed8', type: 'income' },
 
   // Japanese income
@@ -81,6 +82,7 @@ export const categoryDisplayInfo: Record<string, CategoryDisplayInfo> = {
 
 const incomeColorMap: Record<string, string> = {
   'salary': '#3b82f6',
+  'revenue': '#0ea5e9',
   'company_refund': '#60a5fa',
   'country_refund': '#2563eb',
   'withdraw': '#93c5fd',

@@ -6,7 +6,7 @@ export interface CategoryDisplayInfo {
 
 export interface CategoryMapping {
   mappings: Record<string, string | { income: string; expense: string }>;
-  subcategories?: Record<string, string>;
+  subcategories?: Record<string, string> | { income: Record<string, string>; expense: Record<string, string> };
   defaultCategory?: string | { income: string; expense: string };
   categories: {
     income?: string[] | Record<string, { name: string; color: string }>;
