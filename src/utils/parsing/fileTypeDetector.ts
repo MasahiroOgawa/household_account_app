@@ -3,8 +3,9 @@ import { configLoader } from '../config/configLoader';
 export const detectFileType = (headers: string[], fileName: string): string | null => {
   const mapping = configLoader.getColumnMapping();
 
-  // Check filename patterns in source configs
+  // Check filename patterns in source configs (skip generic fallback)
   for (const [sourceType, config] of Object.entries(mapping.sources)) {
+    if (sourceType === 'generic') continue;
     if (config.filename) {
       for (const pattern of config.filename) {
         const regexPattern = pattern
@@ -20,7 +21,7 @@ export const detectFileType = (headers: string[], fileName: string): string | nu
     }
   }
 
-  // Check detection rules
+  // Check detection rules (filename patterns and header patterns)
   for (const [sourceType, rules] of Object.entries(mapping.detectionRules)) {
     if (rules.fileNamePattern) {
       const regex = new RegExp(rules.fileNamePattern, 'i');
@@ -37,6 +38,11 @@ export const detectFileType = (headers: string[], fileName: string): string | nu
         return sourceType;
       }
     }
+  }
+
+  // Fallback to generic if available
+  if (mapping.sources['generic']) {
+    return 'generic';
   }
 
   return null;

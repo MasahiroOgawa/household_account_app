@@ -26,14 +26,18 @@ describe('detectFileType', () => {
     expect(detectFileType([], 'random_file.csv')).toBe('generic');
   });
 
-  it('detects UFJ from header patterns when filename is not csv', () => {
+  it('detects UFJ from header patterns', () => {
     const headers = ['日付', '摘要', 'お支払金額', 'お預り金額', '残高'];
-    // generic *.csv pattern matches first for .csv files, so use non-csv name
-    expect(detectFileType(headers, 'data.txt')).toBe('ufj');
+    expect(detectFileType(headers, 'data.csv')).toBe('ufj');
   });
 
-  it('detects SMBC from header patterns when filename is not csv', () => {
+  it('detects SMBC from header patterns', () => {
     const headers = ['年月日', 'お引出し', 'お預け入れ', '摘要'];
-    expect(detectFileType(headers, 'data.txt')).toBe('smbc');
+    expect(detectFileType(headers, 'data.csv')).toBe('smbc');
+  });
+
+  it('detects JRE from header patterns', () => {
+    const headers = ['取引日', '入出金(円)', '取引後残高(円)', '入出金内容'];
+    expect(detectFileType(headers, 'data.csv')).toBe('jre');
   });
 });

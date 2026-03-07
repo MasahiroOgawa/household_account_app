@@ -72,22 +72,16 @@
     },
     "jre": {
       "name": "JRE Bank",
-      "filename": ["*jre*.csv", "*JRE*.csv"],
+      "filename": ["RB-torihikimeisai*.csv", "*RB-torihiki*.csv", "*jre*.csv", "*JRE*.csv"],
       "columns": {
         "date": 0,
-        "withdrawal": 1,
-        "deposit": 2,
-        "balance": 3,
-        "description": 4,
-        "accountNumber": -1
-      },
-      "amountColumns": {
-        "withdrawal": 1,
-        "deposit": 2
+        "description": 3,
+        "amount": 1,
+        "balance": 2
       },
       "encoding": "shift-jis",
       "skipRows": 1,
-      "dateFormat": "YYYY/M/D"
+      "dateFormat": "YYYYMMDD"
     },
     "smbc": {
       "name": "SMBC Bank",
@@ -128,8 +122,8 @@
       "fileNamePattern": "ufj|三菱|UFJ"
     },
     "jre": {
-      "headerPatterns": ["取引日", "お引出し", "お預入れ", "残高"],
-      "fileNamePattern": "jre|JRE"
+      "headerPatterns": ["取引日", "入出金"],
+      "fileNamePattern": "rb-torihiki|jre|JRE"
     },
     "smbc": {
       "headerPatterns": ["年月日", "お引出し", "お預り", "お取り扱い内容"],
