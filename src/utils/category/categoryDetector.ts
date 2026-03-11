@@ -84,7 +84,7 @@ export const detectCategory = (description: string, transactionType?: 'income' |
       return 'company_refund';
     }
     if (lowerDescription.includes('振込') || lowerDescription.includes('振替')) {
-      return 'withdraw';
+      return 'other_income';
     }
   }
 
