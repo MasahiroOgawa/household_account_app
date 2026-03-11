@@ -63,14 +63,13 @@ export const CategoryEditor: React.FC = () => {
     if (filterMode === 'others') {
       entries = entries.filter(([, value]) => {
         if (typeof value === 'string') {
-          // Plain string: check if it resolves to "other" on its natural side
           const incResolved = resolveCategory(value, 'income');
           const expResolved = resolveCategory(value, 'expense');
-          return incResolved === 'other_income' || expResolved === 'other_expense';
+          return incResolved === 'other_income' && expResolved === 'other_expense';
         }
         const incResolved = resolveCategory(value.income, 'income');
         const expResolved = resolveCategory(value.expense, 'expense');
-        return incResolved === 'other_income' || expResolved === 'other_expense';
+        return incResolved === 'other_income' && expResolved === 'other_expense';
       });
     }
 
