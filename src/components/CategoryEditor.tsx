@@ -201,7 +201,7 @@ export const CategoryEditor: React.FC = () => {
 
       {/* Table */}
       <div className="border-2 border-black rounded overflow-auto max-h-[60vh]" style={{ resize: 'horizontal' }}>
-        <table className="w-full text-sm table-fixed">
+        <table className="w-full text-sm table-fixed" style={{ borderCollapse: 'collapse' }}>
           <colgroup>
             <col style={{ width: '30%' }} />
             <col style={{ width: '35%' }} />
@@ -225,9 +225,9 @@ export const CategoryEditor: React.FC = () => {
               const expResolved = resolveCategory(expRaw, 'expense');
 
               return (
-                <tr key={merchant} className={`border-b border-gray-400 hover:bg-yellow-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                  <td className="px-2 py-1.5 font-mono text-xs border-r border-gray-400 overflow-hidden text-ellipsis whitespace-nowrap" title={merchant}>{merchant}</td>
-                  <td className="px-2 py-1.5 border-r border-gray-400">
+                <tr key={merchant} className={`hover:bg-yellow-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                  <td className="px-2 py-1.5 font-mono text-xs overflow-hidden text-ellipsis whitespace-nowrap" style={{ borderBottom: '1px solid #9ca3af', borderRight: '1px solid #9ca3af' }} title={merchant}>{merchant}</td>
+                  <td className="px-2 py-1.5" style={{ borderBottom: '1px solid #9ca3af', borderRight: '1px solid #9ca3af' }}>
                     <div className="flex items-center gap-2">
                       <select
                         value={incRaw}
@@ -244,7 +244,7 @@ export const CategoryEditor: React.FC = () => {
                       <CategoryBadge category={incResolved} />
                     </div>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-1.5" style={{ borderBottom: '1px solid #9ca3af' }}>
                     <div className="flex items-center gap-2">
                       <select
                         value={expRaw}
