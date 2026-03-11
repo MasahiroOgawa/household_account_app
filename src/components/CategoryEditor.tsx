@@ -62,12 +62,14 @@ export const CategoryEditor: React.FC = () => {
 
     if (filterMode === 'others') {
       entries = entries.filter(([, value]) => {
-        const incRaw = typeof value === 'string' ? value : value.income;
-        const expRaw = typeof value === 'string'
-          ? (expenseDropdownOptions.includes(value) ? value : 'other_expense')
-          : value.expense;
-        const incResolved = resolveCategory(incRaw, 'income');
-        const expResolved = resolveCategory(expRaw, 'expense');
+        if (typeof value === 'string') {
+          // Plain string: check if it resolves to "other" on its natural side
+          const incResolved = resolveCategory(value, 'income');
+          const expResolved = resolveCategory(value, 'expense');
+          return incResolved === 'other_income' || expResolved === 'other_expense';
+        }
+        const incResolved = resolveCategory(value.income, 'income');
+        const expResolved = resolveCategory(value.expense, 'expense');
         return incResolved === 'other_income' || expResolved === 'other_expense';
       });
     }
