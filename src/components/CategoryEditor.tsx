@@ -63,13 +63,12 @@ export const CategoryEditor: React.FC = () => {
     if (filterMode === 'others') {
       entries = entries.filter(([, value]) => {
         const incRaw = typeof value === 'string' ? value : value.income;
-        const expRaw = typeof value === 'string' ? value : value.expense;
+        const expRaw = typeof value === 'string'
+          ? (expenseDropdownOptions.includes(value) ? value : 'other_expense')
+          : value.expense;
         const incResolved = resolveCategory(incRaw, 'income');
         const expResolved = resolveCategory(expRaw, 'expense');
-        return (
-          incResolved === 'other_income' || incResolved === 'other_expense' ||
-          expResolved === 'other_income' || expResolved === 'other_expense'
-        );
+        return incResolved === 'other_income' || expResolved === 'other_expense';
       });
     }
 
@@ -91,7 +90,9 @@ export const CategoryEditor: React.FC = () => {
     setMappings(prev => {
       const current = prev[merchant];
       const incCurrent = typeof current === 'string' ? current : current.income;
-      const expCurrent = typeof current === 'string' ? current : current.expense;
+      const expCurrent = typeof current === 'string'
+        ? (expenseDropdownOptions.includes(current) ? current : 'other_expense')
+        : current.expense;
 
       const incNew = type === 'income' ? newCategory : incCurrent;
       const expNew = type === 'expense' ? newCategory : expCurrent;
@@ -217,8 +218,11 @@ export const CategoryEditor: React.FC = () => {
           </thead>
           <tbody>
             {filteredEntries.map(([merchant, value]) => {
-              const incRaw = typeof value === 'string' ? value : value.income;
-              const expRaw = typeof value === 'string' ? value : value.expense;
+              const rawValue = typeof value === 'string' ? value : null;
+              const incRaw = rawValue ?? (value as { income: string; expense: string }).income;
+              const expRaw = rawValue
+                ? (expenseDropdownOptions.includes(rawValue) ? rawValue : 'other_expense')
+                : (value as { income: string; expense: string }).expense;
               const incResolved = resolveCategory(incRaw, 'income');
               const expResolved = resolveCategory(expRaw, 'expense');
 
