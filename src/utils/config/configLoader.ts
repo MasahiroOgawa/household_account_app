@@ -23,11 +23,6 @@ class ConfigLoader {
     return this.columnMapping;
   }
 
-  saveCategoryMapping(mapping: CategoryMapping) {
-    this.categoryMapping = mapping;
-    localStorage.setItem('categoryMapping', JSON.stringify(mapping));
-  }
-
   saveColumnMapping(mapping: ColumnMapping) {
     this.columnMapping = mapping;
     localStorage.setItem('columnMapping', JSON.stringify(mapping));

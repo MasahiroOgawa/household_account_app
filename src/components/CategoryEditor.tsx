@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Settings, Search, Save, RotateCcw, Check } from 'lucide-react';
+import { Settings, Search, RotateCcw, Download } from 'lucide-react';
 import { configLoader } from '../utils/config/configLoader';
 import { getCategoryDisplayName } from '../utils/category/categoryDisplay';
 import { getCategoryColor } from '../utils/category/categoryColors';
@@ -36,7 +36,6 @@ export const CategoryEditor: React.FC = () => {
   const [filterMode, setFilterMode] = useState<'others' | 'all'>('others');
   const [searchQuery, setSearchQuery] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Build dropdown options split by income/expense
   const { incomeDropdownOptions, expenseDropdownOptions } = useMemo(() => {
@@ -102,16 +101,6 @@ export const CategoryEditor: React.FC = () => {
       return { ...prev, [merchant]: newValue };
     });
     setHasUnsavedChanges(true);
-    setSaveSuccess(false);
-  };
-
-  const handleSave = () => {
-    const updated = { ...categoryMapping, mappings };
-    configLoader.saveCategoryMapping(updated);
-    setCategoryMapping(updated);
-    setHasUnsavedChanges(false);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   const handleDiscard = () => {
@@ -119,7 +108,20 @@ export const CategoryEditor: React.FC = () => {
     setMappings({ ...current.mappings });
     setCategoryMapping(current);
     setHasUnsavedChanges(false);
-    setSaveSuccess(false);
+  };
+
+  const handleDownload = () => {
+    const current = { ...categoryMapping, mappings };
+    const json = JSON.stringify(current, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'categoryMapping.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -175,11 +177,6 @@ export const CategoryEditor: React.FC = () => {
         </span>
 
         <div className="flex gap-2 ml-auto items-center">
-          {saveSuccess && (
-            <span className="flex items-center gap-1 text-green-700 text-sm font-medium">
-              <Check className="w-4 h-4" /> Saved
-            </span>
-          )}
           <button
             onClick={handleDiscard}
             disabled={!hasUnsavedChanges}
@@ -193,32 +190,32 @@ export const CategoryEditor: React.FC = () => {
             Discard
           </button>
           <button
-            onClick={handleSave}
-            disabled={!hasUnsavedChanges}
-            className={`flex items-center gap-1 px-5 py-2 text-sm font-bold border-2 border-black rounded transition-all ${
-              hasUnsavedChanges
-                ? 'bg-yellow-300 text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px]'
-                : 'bg-yellow-100 text-gray-400 border-gray-300 cursor-not-allowed'
-            }`}
+            onClick={handleDownload}
+            className="flex items-center gap-1 px-4 py-1.5 text-sm font-bold bg-blue-100 text-blue-800 border-2 border-black rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
           >
-            <Save className="w-4 h-4" />
-            Save
+            <Download className="w-4 h-4" />
+            Download
           </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="border-2 border-black rounded overflow-auto max-h-[60vh]">
-        <table className="w-full text-sm">
+      <div className="border-2 border-black rounded overflow-auto max-h-[60vh]" style={{ resize: 'horizontal' }}>
+        <table className="w-full text-sm table-fixed">
+          <colgroup>
+            <col style={{ width: '30%' }} />
+            <col style={{ width: '35%' }} />
+            <col style={{ width: '35%' }} />
+          </colgroup>
           <thead className="bg-gray-100 sticky top-0 z-10">
             <tr>
-              <th className="text-left px-3 py-2 border-b-2 border-black font-semibold">Merchant</th>
-              <th className="text-left px-3 py-2 border-b-2 border-black font-semibold w-56">Income Subcategory</th>
-              <th className="text-left px-3 py-2 border-b-2 border-black font-semibold w-56">Expense Subcategory</th>
+              <th className="text-left px-2 py-2 border-b-2 border-black border-r border-gray-400 font-semibold">Merchant</th>
+              <th className="text-left px-2 py-2 border-b-2 border-black border-r border-gray-400 font-semibold">Income Subcategory</th>
+              <th className="text-left px-2 py-2 border-b-2 border-black font-semibold">Expense Subcategory</th>
             </tr>
           </thead>
           <tbody>
-            {filteredEntries.map(([merchant, value]) => {
+            {filteredEntries.map(([merchant, value], index) => {
               const rawValue = typeof value === 'string' ? value : null;
               const incRaw = rawValue ?? (value as { income: string; expense: string }).income;
               const expRaw = rawValue
@@ -228,9 +225,9 @@ export const CategoryEditor: React.FC = () => {
               const expResolved = resolveCategory(expRaw, 'expense');
 
               return (
-                <tr key={merchant} className="border-b border-gray-200 hover:bg-yellow-50">
-                  <td className="px-3 py-2 font-mono text-xs break-all">{merchant}</td>
-                  <td className="px-3 py-2">
+                <tr key={merchant} className={`border-b border-gray-400 hover:bg-yellow-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                  <td className="px-2 py-1.5 font-mono text-xs border-r border-gray-400 overflow-hidden text-ellipsis whitespace-nowrap" title={merchant}>{merchant}</td>
+                  <td className="px-2 py-1.5 border-r border-gray-400">
                     <div className="flex items-center gap-2">
                       <select
                         value={incRaw}
@@ -247,7 +244,7 @@ export const CategoryEditor: React.FC = () => {
                       <CategoryBadge category={incResolved} />
                     </div>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     <div className="flex items-center gap-2">
                       <select
                         value={expRaw}
