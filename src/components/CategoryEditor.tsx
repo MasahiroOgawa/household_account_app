@@ -89,7 +89,9 @@ export const CategoryEditor: React.FC = () => {
   ) => {
     setMappings(prev => {
       const current = prev[merchant];
-      const incCurrent = typeof current === 'string' ? current : current.income;
+      const incCurrent = typeof current === 'string'
+        ? (incomeDropdownOptions.includes(current) ? current : 'other_income')
+        : current.income;
       const expCurrent = typeof current === 'string'
         ? (expenseDropdownOptions.includes(current) ? current : 'other_expense')
         : current.expense;
@@ -217,7 +219,9 @@ export const CategoryEditor: React.FC = () => {
           <tbody>
             {filteredEntries.map(([merchant, value], index) => {
               const rawValue = typeof value === 'string' ? value : null;
-              const incRaw = rawValue ?? (value as { income: string; expense: string }).income;
+              const incRaw = rawValue
+                ? (incomeDropdownOptions.includes(rawValue) ? rawValue : 'other_income')
+                : (value as { income: string; expense: string }).income;
               const expRaw = rawValue
                 ? (expenseDropdownOptions.includes(rawValue) ? rawValue : 'other_expense')
                 : (value as { income: string; expense: string }).expense;
