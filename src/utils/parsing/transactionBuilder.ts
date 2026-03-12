@@ -29,6 +29,42 @@ export const buildTransaction = (
   sourceConfig: SourceConfig,
   filename?: string
 ): Transaction | null => {
+  // Handle re-imported transaction result CSV — preserve all fields as-is
+  if (sourceType === 'transaction_result') {
+    const col = (key: string) => row[sourceConfig.columns[key] as number] || '';
+    const dateStr = col('date');
+    const time = col('time') || '12:00:00';
+    const amountStr = col('amount');
+    const type = (col('type') || 'expense') as 'income' | 'expense';
+    const description = col('description');
+    const category = col('category');
+    const shopName = col('shopName');
+    const source = col('source') || 'Unknown';
+
+    if (!dateStr || !amountStr) return null;
+    const parsedDate = parseDate(dateStr);
+    if (!parsedDate || !isValid(parsedDate)) return null;
+    const amount = Math.abs(parseAmount(amountStr));
+    if (amount === 0) return null;
+
+    return {
+      id: generateUniqueId(sourceType),
+      date: format(parsedDate, 'yyyy-MM-dd'),
+      time,
+      amount,
+      description: description || `${source} Transaction`,
+      category,
+      shopName: shopName || 'Unknown',
+      type,
+      source,
+      originalData: {
+        rawRow: row,
+        fileType: 'transaction_result',
+        fileName: filename,
+      },
+    };
+  }
+
   const columns = sourceConfig.columns;
 
   // Extract date

@@ -58,7 +58,9 @@ const isDuplicate = (transaction1: Transaction, transaction2: Transaction): bool
 };
 
 const mergeDuplicateTransactions = (transactions: Transaction[]): Transaction => {
-  const primary = transactions[0];
+  // Prefer transaction_result (re-imported) entry — it has user-edited categories
+  const reImported = transactions.find(t => t.originalData?.fileType === 'transaction_result');
+  const primary = reImported || transactions[0];
 
   const bestDescription = transactions.reduce((best, current) =>
     current.description.length > best.description.length ? current : best

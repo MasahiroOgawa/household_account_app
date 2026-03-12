@@ -5,13 +5,16 @@ import { format, parseISO } from 'date-fns';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
 import { getCategoryColor } from '../utils/category/categoryColors';
 import { getCategoryDisplayName } from '../utils/category/categoryDisplay';
+import { getSubcategoryOptions, resolveToEnglishCategory } from '../utils/category/subcategoryUtils';
 
 interface TransactionTableProps {
   transactions: Transaction[];
   onExport: () => void;
+  onExportTaxReturn: () => void;
+  onCategoryChange: (id: string, category: string) => void;
 }
 
-export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onExport }) => {
+export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, onExport, onExportTaxReturn, onCategoryChange }) => {
   // Sort transactions by date and time (newest first)
   const sortedTransactions = sortTransactionsByDateTime(transactions);
 
@@ -93,13 +96,22 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
         <h2 className="text-xl font-semibold text-gray-900">
           Transactions ({transactions.length})
         </h2>
-        <button
-          onClick={onExport}
-          className="inline-flex items-center px-6 py-3 bg-yellow-200 hover:bg-yellow-300 text-black font-bold rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Export CSV
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={onExport}
+            className="inline-flex items-center px-6 py-3 bg-yellow-200 hover:bg-yellow-300 text-black font-bold rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download
+          </button>
+          <button
+            onClick={onExportTaxReturn}
+            className="inline-flex items-center px-6 py-3 bg-green-200 hover:bg-green-300 text-black font-bold rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            確定申告用ダウンロード
+          </button>
+        </div>
       </div>
 
       {/* Transactions Table */}
@@ -209,16 +221,27 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
                             <Tag className="w-4 h-4 text-gray-400" />
-                            <span 
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                            {(() => {
+                              const catColor = getCategoryColor(resolveToEnglishCategory(transaction.category, transaction.type));
+                              return <select
+                              value={transaction.category}
+                              onChange={(e) => onCategoryChange(transaction.id, e.target.value)}
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer"
                               style={{
-                                backgroundColor: getCategoryColor(transaction.category as string) + '30',
-                                color: getCategoryColor(transaction.category as string),
-                                border: `1px solid ${getCategoryColor(transaction.category as string)}`
+                                backgroundColor: catColor + '30',
+                                color: catColor,
+                                border: `1px solid ${catColor}`
                               }}
                             >
-                              {getCategoryDisplayName(transaction.category as string)}
-                            </span>
+                              {getSubcategoryOptions(transaction.type).map(opt => (
+                                <option key={opt} value={opt}>{getCategoryDisplayName(opt)}</option>
+                              ))}
+                              {/* Keep current value visible even if not in options */}
+                              {!getSubcategoryOptions(transaction.type).includes(transaction.category) && (
+                                <option value={transaction.category}>{getCategoryDisplayName(transaction.category)}</option>
+                              )}
+                            </select>;
+                            })()}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

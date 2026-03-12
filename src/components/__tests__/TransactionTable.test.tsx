@@ -36,7 +36,7 @@ describe('TransactionTable', () => {
         createMockTransaction('2024-06-01', 600000, 'income'),
       ];
 
-      render(<TransactionTable transactions={transactions} onExport={mockOnExport} />);
+      render(<TransactionTable transactions={transactions} onExport={mockOnExport} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />);
 
       // Check that May totals are displayed correctly
       // Income: 738747 + 100000 = 838747
@@ -53,7 +53,7 @@ describe('TransactionTable', () => {
         createMockTransaction('2024-06-15', 300000, 'expense'),
       ];
 
-      render(<TransactionTable transactions={transactions} onExport={mockOnExport} />);
+      render(<TransactionTable transactions={transactions} onExport={mockOnExport} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />);
 
       // Check summary cards
       // Total income: 1000000 + 500000 = 1500000
@@ -76,7 +76,7 @@ describe('TransactionTable', () => {
         createMockTransaction('2024-05-15', 3000000, 'expense', 'Large Expense'),
       ];
 
-      render(<TransactionTable transactions={transactions} onExport={mockOnExport} />);
+      render(<TransactionTable transactions={transactions} onExport={mockOnExport} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />);
 
       // Check that 3M amounts appear in the rendered output
       const allMatches = screen.getAllByText(/¥3,000,000/);
@@ -95,7 +95,7 @@ describe('TransactionTable', () => {
         createMockTransaction('2024-06-15', 75000, 'expense'),
       ];
 
-      render(<TransactionTable transactions={transactions} onExport={mockOnExport} />);
+      render(<TransactionTable transactions={transactions} onExport={mockOnExport} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />);
 
       // Check that months are displayed
       expect(screen.getAllByText(/May 2024/).length).toBeGreaterThanOrEqual(1);
@@ -111,7 +111,7 @@ describe('TransactionTable', () => {
         createMockTransaction('2024-05-15', 600000, 'expense'),
       ];
 
-      render(<TransactionTable transactions={transactions} onExport={mockOnExport} />);
+      render(<TransactionTable transactions={transactions} onExport={mockOnExport} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />);
 
       // Net for May: 1000000 - 600000 = 400000
       expect(screen.getByText('Net: +¥400,000')).toBeInTheDocument();
@@ -120,7 +120,7 @@ describe('TransactionTable', () => {
 
   describe('Empty State', () => {
     it('should show empty state when no transactions', () => {
-      render(<TransactionTable transactions={[]} onExport={mockOnExport} />);
+      render(<TransactionTable transactions={[]} onExport={mockOnExport} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />);
 
       expect(screen.getByText('No transactions yet')).toBeInTheDocument();
       expect(screen.getByText(/Upload a CSV file to get started/)).toBeInTheDocument();
@@ -134,7 +134,7 @@ describe('TransactionTable', () => {
         createMockTransaction('2024-05-15', 50000, 'expense', 'Test Expense'),
       ];
 
-      render(<TransactionTable transactions={transactions} onExport={mockOnExport} />);
+      render(<TransactionTable transactions={transactions} onExport={mockOnExport} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />);
 
       // Check that transaction descriptions are shown
       expect(screen.getByText('Test Income')).toBeInTheDocument();

@@ -112,6 +112,12 @@ export const getCategoryColor = (category: string): string => {
   const info = categoryDisplayInfo[normalized];
   if (info) return info.color;
 
+  // Handle private-* categories by stripping prefix
+  if (normalized.startsWith('private-')) {
+    const parent = categoryDisplayInfo[normalized.slice(8)];
+    if (parent) return parent.color;
+  }
+
   if (normalized === 'invest' || normalized === 'investment') {
     return '#ef4444';
   }

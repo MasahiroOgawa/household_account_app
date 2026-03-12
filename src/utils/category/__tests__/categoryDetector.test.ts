@@ -3,27 +3,35 @@ import { detectCategory, isInternalTransfer, isFee } from '../categoryDetector';
 
 describe('detectCategory', () => {
   it('detects salary for income with 給与 keyword', () => {
-    expect(detectCategory('給与振込', 'income')).toBe('salary');
+    expect(detectCategory('給与振込', 'income')).toBe('private-salary');
   });
 
   it('detects withdraw for ATM', () => {
-    expect(detectCategory('ATM出金', 'income')).toBe('withdraw');
+    expect(detectCategory('ATM出金', 'income')).toBe('private-withdraw');
   });
 
-  it('returns other_expense for unknown expense', () => {
-    expect(detectCategory('something completely unknown', 'expense')).toBe('other_expense');
+  it('returns private-other_expense for unknown expense', () => {
+    expect(detectCategory('something completely unknown', 'expense')).toBe('private-other_expense');
   });
 
-  it('returns other_income for unknown income', () => {
-    expect(detectCategory('something completely unknown', 'income')).toBe('other_income');
+  it('returns private-other_income for unknown income', () => {
+    expect(detectCategory('something completely unknown', 'income')).toBe('private-other_income');
   });
 
-  it('detects country_refund for 還付', () => {
-    expect(detectCategory('税金還付', 'income')).toBe('country_refund');
+  it('detects private-tax_refund for 還付', () => {
+    expect(detectCategory('税金還付', 'income')).toBe('private-tax_refund');
   });
 
-  it('detects company_refund for 返金', () => {
-    expect(detectCategory('返金処理', 'income')).toBe('company_refund');
+  it('detects private-company_refund for 返金', () => {
+    expect(detectCategory('返金処理', 'income')).toBe('private-company_refund');
+  });
+
+  it('detects Japanese subcategory for mapped merchants', () => {
+    expect(detectCategory('ＡＭＡＺＯＮ．ＣＯ．ＪＰ', 'expense')).toBe('消耗品費');
+  });
+
+  it('detects 旅費交通費 for travel-related merchants', () => {
+    expect(detectCategory('ＪＲ東海', 'expense')).toBe('旅費交通費');
   });
 });
 

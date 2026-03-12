@@ -162,7 +162,7 @@ describe('Parsing Pipeline Integration', () => {
 
     it('assigns salary category for income transactions', () => {
       const cat = detectCategory('給与振込', 'income');
-      expect(cat).toBe('salary');
+      expect(cat).toBe('private-salary');
     });
   });
 });

@@ -1,5 +1,4 @@
 import { configLoader } from '../config/configLoader';
-import { CategoryMapping } from '../../types/Category';
 
 const normalizeWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
 
@@ -11,43 +10,20 @@ const resolveMappingValue = (
   return transactionType === 'income' ? value.income : value.expense;
 };
 
-type SplitSubcategories = { income: Record<string, string>; expense: Record<string, string> };
-
-const getSubcategoryMap = (
-  subcategories: CategoryMapping['subcategories'],
-  transactionType?: 'income' | 'expense'
-): Record<string, string> => {
-  if (!subcategories) return {};
-  if ('income' in subcategories && 'expense' in subcategories) {
-    const split = subcategories as SplitSubcategories;
-    return transactionType === 'income' ? split.income : split.expense;
-  }
-  return subcategories as Record<string, string>;
-};
-
 export const detectCategory = (description: string, transactionType?: 'income' | 'expense'): string => {
   const mapping = configLoader.getCategoryMapping();
   const normalizedDescription = normalizeWhitespace(description);
-  const subcatMap = getSubcategoryMap(mapping.subcategories, transactionType);
 
-  // Exact match
+  // Exact match — return raw subcategory key directly (e.g. "旅費交通費", "private-grocery")
   if (mapping.mappings[description]) {
-    const rawCategory = resolveMappingValue(mapping.mappings[description], transactionType);
-    if (subcatMap[rawCategory]) {
-      return subcatMap[rawCategory];
-    }
-    return rawCategory;
+    return resolveMappingValue(mapping.mappings[description], transactionType);
   }
 
-  // Prefix match (handles cases like "三菱ＮＦＪ銀行 三島支店 普通預金...")
+  // Prefix match
   for (const [keyword, value] of Object.entries(mapping.mappings)) {
     const normalizedKeyword = normalizeWhitespace(keyword);
     if (normalizedDescription.startsWith(normalizedKeyword)) {
-      const category = resolveMappingValue(value, transactionType);
-      if (subcatMap[category]) {
-        return subcatMap[category];
-      }
-      return category;
+      return resolveMappingValue(value, transactionType);
     }
   }
 
@@ -56,35 +32,31 @@ export const detectCategory = (description: string, transactionType?: 'income' |
   for (const [keyword, value] of Object.entries(mapping.mappings)) {
     const normalizedKeyword = normalizeWhitespace(keyword).toLowerCase();
     if (lowerDescription.includes(normalizedKeyword)) {
-      const category = resolveMappingValue(value, transactionType);
-      if (subcatMap[category]) {
-        return subcatMap[category];
-      }
-      return category;
+      return resolveMappingValue(value, transactionType);
     }
   }
 
-  // Income pattern detection
+  // Income pattern detection — return private-* versions
   if (transactionType === 'income') {
     if (lowerDescription.includes('atm') || lowerDescription.includes('ａｔｍ') ||
         lowerDescription.includes('出金') || lowerDescription.includes('引出') ||
         lowerDescription.includes('引き出') || lowerDescription.includes('現金')) {
-      return 'withdraw';
+      return 'private-withdraw';
     }
     if (lowerDescription.includes('給与') || lowerDescription.includes('給料') ||
         lowerDescription.includes('賞与') || lowerDescription.includes('salary') ||
         lowerDescription.includes('ボーナス')) {
-      return 'salary';
+      return 'private-salary';
     }
     if (lowerDescription.includes('還付') || lowerDescription.includes('税') ||
         lowerDescription.includes('refund')) {
-      return 'country_refund';
+      return 'private-tax_refund';
     }
     if (lowerDescription.includes('返金') || lowerDescription.includes('払戻')) {
-      return 'company_refund';
+      return 'private-company_refund';
     }
     if (lowerDescription.includes('振込') || lowerDescription.includes('振替')) {
-      return 'other_income';
+      return 'private-other_income';
     }
   }
 
@@ -98,7 +70,7 @@ export const detectCategory = (description: string, transactionType?: 'income' |
     return mapping.defaultCategory;
   }
 
-  return transactionType === 'income' ? 'other_income' : 'other_expense';
+  return transactionType === 'income' ? 'private-other_income' : 'private-other_expense';
 };
 
 export const isInternalTransfer = (description: string): boolean => {

@@ -46,7 +46,7 @@ describe('Monthly Totals Consistency Integration Tests', () => {
       // Render both components with the same data
       const statusView = render(<StatusView transactions={transactions} />);
       const transactionTable = render(
-        <TransactionTable transactions={transactions} onExport={() => {}} />
+        <TransactionTable transactions={transactions} onExport={() => {}} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />
       );
 
       // Calculate expected May totals using the shared function
@@ -79,7 +79,7 @@ describe('Monthly Totals Consistency Integration Tests', () => {
 
       const statusView = render(<StatusView transactions={transactions} />);
       const transactionTable = render(
-        <TransactionTable transactions={transactions} onExport={() => {}} />
+        <TransactionTable transactions={transactions} onExport={() => {}} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />
       );
 
       // Calculate expected May totals
@@ -133,7 +133,7 @@ describe('Monthly Totals Consistency Integration Tests', () => {
       // Both views should process all months correctly
       const statusView = render(<StatusView transactions={transactions} />);
       const transactionTable = render(
-        <TransactionTable transactions={transactions} onExport={() => {}} />
+        <TransactionTable transactions={transactions} onExport={() => {}} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />
       );
 
       // Verify total income and expenses match
@@ -174,7 +174,7 @@ describe('Monthly Totals Consistency Integration Tests', () => {
       // Both views should handle invalid dates gracefully
       const statusView = render(<StatusView transactions={transactions} />);
       const transactionTable = render(
-        <TransactionTable transactions={transactions} onExport={() => {}} />
+        <TransactionTable transactions={transactions} onExport={() => {}} onExportTaxReturn={() => {}} onCategoryChange={() => {}} />
       );
 
       // Should not crash and should show valid transactions only

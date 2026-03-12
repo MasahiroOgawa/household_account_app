@@ -5,7 +5,7 @@ import { TransactionTable } from './TransactionTable';
 import { StatusView } from './StatusView';
 import { parseCSVFiles } from '../utils/parsing/csvParser';
 import { detectAndMergeDuplicates } from '../utils/duplicateDetector';
-import { exportTransactionsToCSV } from '../utils/csvExporter';
+import { exportTransactionsByYear, exportTransactionsForTaxReturn } from '../utils/csvExporter';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
 import { CategoryEditor } from './CategoryEditor';
 
@@ -62,9 +62,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       alert('No transactions to export');
       return;
     }
-    const sortedTransactions = sortTransactionsByDateTime(transactions);
-    const filename = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
-    exportTransactionsToCSV(sortedTransactions, filename);
+    exportTransactionsByYear(sortTransactionsByDateTime(transactions));
+  };
+
+  const handleExportTaxReturn = () => {
+    if (transactions.length === 0) {
+      alert('No transactions to export');
+      return;
+    }
+    exportTransactionsForTaxReturn(sortTransactionsByDateTime(transactions));
+  };
+
+  const handleCategoryChange = (id: string, newCategory: string) => {
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, category: newCategory } : t));
   };
 
   const renderContent = () => {
@@ -87,7 +97,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         return <CategoryEditor />;
       case 'main':
       default:
-        return <TransactionTable transactions={transactions} onExport={handleExport} />;
+        return <TransactionTable transactions={transactions} onExport={handleExport} onExportTaxReturn={handleExportTaxReturn} onCategoryChange={handleCategoryChange} />;
     }
   };
 

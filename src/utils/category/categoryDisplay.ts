@@ -22,6 +22,14 @@ export const getCategoryDisplayName = (category: string): string => {
     if (categoryInfo && categoryInfo.name) return categoryInfo.name;
   }
 
+  // Handle private-* prefix: strip it and look up the parent
+  if (category.startsWith('private-')) {
+    const parent = category.slice(8);
+    const parentInfo = categoryDisplayInfo[parent.toLowerCase()];
+    if (parentInfo) return parentInfo.name;
+    return parent.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  }
+
   return category.split('_').map(word =>
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
@@ -31,7 +39,8 @@ export const getCategoryType = (category: string): 'income' | 'expense' | 'trans
   const info = categoryDisplayInfo[category.toLowerCase()];
   if (info) return info.type;
 
-  const incomeCategories = ['salary', 'revenue', 'company_refund', 'country_refund', 'withdraw', 'other_income'];
+  const incomeCategories = ['salary', 'revenue', 'company_refund', 'country_refund', 'withdraw', 'other_income',
+    'private-salary', 'private-revenue', 'private-company_refund', 'private-tax_refund', 'private-withdraw', 'private-other_income'];
   if (incomeCategories.includes(category.toLowerCase())) return 'income';
 
   const categoryConfig = configLoader.getCategoryMapping();

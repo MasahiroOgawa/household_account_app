@@ -4,7 +4,7 @@ export interface SourceConfig {
   columns: Record<string, number | string>;
   encoding: string;
   skipRows: number;
-  dateFormat: string;
+  dateFormat?: string;
   amountColumns?: {
     withdrawal: number;
     deposit: number;
