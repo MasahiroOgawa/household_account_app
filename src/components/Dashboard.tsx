@@ -95,7 +95,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       case 'status':
         return <StatusView transactions={transactions} />;
       case 'categories':
-        return <CategoryEditor />;
+        return <CategoryEditor transactions={transactions} />;
       case 'main':
       default:
         return <TransactionTable transactions={transactions} onExport={handleExport} onExportTaxReturn={handleExportTaxReturn} onCategoryChange={handleCategoryChange} />;

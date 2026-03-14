@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Settings, Search, RotateCcw, Download } from 'lucide-react';
+import { Transaction } from '../types/Transaction';
 import { configLoader } from '../utils/config/configLoader';
 import { getCategoryDisplayName } from '../utils/category/categoryDisplay';
 import { getCategoryColor } from '../utils/category/categoryColors';
@@ -15,7 +16,11 @@ const CategoryBadge: React.FC<{ category: string }> = ({ category }) => (
   </span>
 );
 
-export const CategoryEditor: React.FC = () => {
+interface CategoryEditorProps {
+  transactions?: Transaction[];
+}
+
+export const CategoryEditor: React.FC<CategoryEditorProps> = ({ transactions = [] }) => {
   const [categoryMapping, setCategoryMapping] = useState(() => configLoader.getCategoryMapping());
   type SplitSubs = { income: Record<string, string>; expense: Record<string, string> };
   const emptySubs = {} as Record<string, string>;
@@ -33,6 +38,20 @@ export const CategoryEditor: React.FC = () => {
   const [mappings, setMappings] = useState<Record<string, MappingValue>>(
     () => ({ ...categoryMapping.mappings })
   );
+
+  // Merge unmapped transaction descriptions so new merchants appear in the editor
+  const mergedMappings = useMemo(() => {
+    const result = { ...mappings };
+    for (const t of transactions) {
+      const key = t.shopName && t.shopName !== 'Unknown' ? t.shopName : t.description;
+      if (!key?.trim() || result[key]) continue;
+      result[key] = t.type === 'income'
+        ? { income: t.category, expense: 'private-other_expense' }
+        : { income: 'private-other_income', expense: t.category };
+    }
+    return result;
+  }, [mappings, transactions]);
+
   const [filterMode, setFilterMode] = useState<'others' | 'all'>('others');
   const [searchQuery, setSearchQuery] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -54,7 +73,7 @@ export const CategoryEditor: React.FC = () => {
   );
 
   const filteredEntries = useMemo(() => {
-    let entries = Object.entries(mappings);
+    let entries = Object.entries(mergedMappings);
 
     if (filterMode === 'others') {
       entries = entries.filter(([, value]) => {
@@ -73,7 +92,7 @@ export const CategoryEditor: React.FC = () => {
     }
 
     return entries.sort(([a], [b]) => a.localeCompare(b));
-  }, [mappings, filterMode, searchQuery, resolveCategory]);
+  }, [mergedMappings, filterMode, searchQuery, resolveCategory]);
 
   const handleChange = (
     merchant: string,
@@ -81,12 +100,12 @@ export const CategoryEditor: React.FC = () => {
     newCategory: string
   ) => {
     setMappings(prev => {
-      const current = prev[merchant];
+      const current = prev[merchant] || mergedMappings[merchant];
       const incCurrent = typeof current === 'string'
-        ? (incomeDropdownOptions.includes(current) ? current : 'other_income')
+        ? (incomeDropdownOptions.includes(current) ? current : 'private-other_income')
         : current.income;
       const expCurrent = typeof current === 'string'
-        ? (expenseDropdownOptions.includes(current) ? current : 'other_expense')
+        ? (expenseDropdownOptions.includes(current) ? current : 'private-other_expense')
         : current.expense;
 
       const incNew = type === 'income' ? newCategory : incCurrent;
@@ -106,7 +125,7 @@ export const CategoryEditor: React.FC = () => {
   };
 
   const handleDownload = () => {
-    const current = { ...categoryMapping, mappings };
+    const current = { ...categoryMapping, mappings: mergedMappings };
     const json = JSON.stringify(current, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
