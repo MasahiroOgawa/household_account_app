@@ -4,7 +4,8 @@ import { BarChart3, PieChart } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
 import { calculateMonthlyTotals } from '../utils/monthlyCalculations';
 import { getCategoryColor, getIncomeCategoryColor } from '../utils/category/categoryColors';
-import { getCategoryDisplayName } from '../utils/category/categoryDisplay';
+import { getCategoryDisplayName, normalizeCategory } from '../utils/category/categoryDisplay';
+import { resolveToEnglishCategory } from '../utils/category/subcategoryUtils';
 import { PieChartSVG } from './charts/PieChart';
 import { PieChartLegend } from './charts/PieChartLegend';
 import { MonthlyBarChart, MonthlyBarData } from './charts/BarChart';
@@ -18,8 +19,8 @@ const aggregateByCategory = (transactions: Transaction[], type: 'income' | 'expe
     .filter(t => t.type === type)
     .reduce((acc, t) => {
       const defaultCategory = type === 'income' ? 'other_income' : 'other_expense';
-      const normalized = (t.category || defaultCategory).toLowerCase().trim();
-      acc[normalized] = (acc[normalized] || 0) + t.amount;
+      const mainCategory = resolveToEnglishCategory(normalizeCategory(t.category || defaultCategory), type);
+      acc[mainCategory] = (acc[mainCategory] || 0) + t.amount;
       return acc;
     }, {} as Record<string, number>);
 
@@ -63,7 +64,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     const categoryBreakdown = monthTransactions
       .filter(t => t.type === 'expense')
       .reduce((acc, t) => {
-        const k = (t.category || 'other_expense').toLowerCase().trim();
+        const k = resolveToEnglishCategory(normalizeCategory(t.category || 'other_expense'), 'expense');
         acc[k] = (acc[k] || 0) + t.amount;
         return acc;
       }, {} as Record<string, number>);
@@ -71,7 +72,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
     const incomeCategoryBreakdown = monthTransactions
       .filter(t => t.type === 'income')
       .reduce((acc, t) => {
-        const k = (t.category || 'other_income').toLowerCase().trim();
+        const k = resolveToEnglishCategory(normalizeCategory(t.category || 'other_income'), 'income');
         acc[k] = (acc[k] || 0) + t.amount;
         return acc;
       }, {} as Record<string, number>);

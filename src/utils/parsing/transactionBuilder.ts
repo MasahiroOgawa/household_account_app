@@ -3,6 +3,7 @@ import { SourceConfig } from '../../types/ColumnMapping';
 import { parseDate } from './dateParser';
 import { parseAbsoluteAmount, parseAmount } from './amountParser';
 import { detectCategory, isInternalTransfer, isFee } from '../category/categoryDetector';
+import { normalizeCategory } from '../category/categoryDisplay';
 import { generateUniqueId } from '../idGenerator';
 import { format, isValid } from 'date-fns';
 
@@ -37,7 +38,7 @@ export const buildTransaction = (
     const amountStr = col('amount');
     const type = (col('type') || 'expense') as 'income' | 'expense';
     const description = col('description');
-    const category = col('category');
+    const category = normalizeCategory(col('category'));
     const shopName = col('shopName');
     const source = col('source') || 'Unknown';
 

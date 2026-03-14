@@ -1,6 +1,36 @@
 import { categoryDisplayInfo } from './categoryColors';
 import { configLoader } from '../config/configLoader';
 
+// Build reverse lookup: display name (lowered) -> internal key
+const displayNameToKey: Record<string, string> = Object.fromEntries(
+  Object.entries(categoryDisplayInfo).map(([key, info]) => [info.name.toLowerCase(), key])
+);
+
+/**
+ * Normalize any category string to canonical snake_case internal key.
+ * Handles display names ("Other Income"), mixed case, spaces, etc.
+ */
+export const normalizeCategory = (category: string): string => {
+  if (!category) return category;
+  const trimmed = category.trim();
+
+  // Already a known internal key
+  if (categoryDisplayInfo[trimmed]) return trimmed;
+  if (categoryDisplayInfo[trimmed.toLowerCase()]) return trimmed.toLowerCase();
+
+  // Match against display names (e.g. "Other Income" -> "other_income")
+  const reversed = displayNameToKey[trimmed.toLowerCase()];
+  if (reversed) return reversed;
+
+  // Handle private-* prefix: normalize the base part, keep prefix
+  if (trimmed.startsWith('private-')) {
+    return `private-${normalizeCategory(trimmed.slice(8))}`;
+  }
+
+  // Convert spaces to underscores and lowercase
+  return trimmed.toLowerCase().replace(/\s+/g, '_');
+};
+
 export const getCategoryDisplayName = (category: string): string => {
   const info = categoryDisplayInfo[category.toLowerCase()];
   if (info) return info.name;

@@ -8,6 +8,7 @@ import { detectAndMergeDuplicates } from '../utils/duplicateDetector';
 import { exportTransactionsByYear, exportTransactionsForTaxReturn } from '../utils/csvExporter';
 import { sortTransactionsByDateTime } from '../utils/transactionUtils';
 import { CategoryEditor } from './CategoryEditor';
+import { normalizeCategory } from '../utils/category/categoryDisplay';
 
 interface DashboardProps {
   user: User;
@@ -74,7 +75,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   };
 
   const handleCategoryChange = (id: string, newCategory: string) => {
-    setTransactions(prev => prev.map(t => t.id === id ? { ...t, category: newCategory } : t));
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, category: normalizeCategory(newCategory) } : t));
   };
 
   const renderContent = () => {
