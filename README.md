@@ -46,50 +46,17 @@ Key fields in each source:
 - `internalTransferPatterns`: Descriptions matching these are filtered out (bank-to-bank transfers)
 - `feePatterns`: Exception patterns — kept even if they match internal transfer patterns
 
-#### `data/categoryMapping.json`
+#### `data/categoryMapping.json` (optional)
 
-Defines categories, subcategories, and merchant-to-category mappings. You can start with an empty one and build it up using the app:
+Defines categories, subcategories, and merchant-to-category mappings. A default `config/baseCategories.json` is provided with standard income/expense categories and Japanese 確定申告 subcategories. If you don't create this file, the app uses the default categories with an empty mappings section.
 
-```json
-{
-  "categories": {
-    "income": ["salary", "revenue", "company_refund", "tax_refund", "withdraw", "other_income"],
-    "expense": ["invest", "education", "grocery", "housing", "medical", "tax", "insurance", "transit", "wear", "leisure", "gift", "fee", "other_expense"]
-  },
-  "subcategories": {
-    "income": {
-      "private-salary": "salary",
-      "private-revenue": "revenue",
-      "private-company_refund": "company_refund",
-      "private-tax_refund": "tax_refund",
-      "private-withdraw": "withdraw",
-      "private-other_income": "other_income"
-    },
-    "expense": {
-      "売上原価": "invest",
-      "租税公課": "tax",
-      "旅費交通費": "transit",
-      "保険料": "insurance",
-      "接待交際費": "grocery",
-      "支払手数料": "fee",
-      "private-invest": "invest",
-      "private-education": "education",
-      "private-grocery": "grocery",
-      "private-housing": "housing",
-      "private-medical": "medical",
-      "private-tax": "tax",
-      "private-insurance": "insurance",
-      "private-transit": "transit",
-      "private-wear": "wear",
-      "private-leisure": "leisure",
-      "private-gift": "gift",
-      "private-fee": "fee",
-      "private-other_expense": "other_expense"
-    }
-  },
-  "mappings": {}
-}
+To customize, copy the default and add your merchant mappings:
+
+```bash
+cp config/baseCategories.json data/categoryMapping.json
 ```
+
+Then use the Category Mapping Editor in the app to assign merchants to subcategories, and download the updated file.
 
 Subcategories with `private-` prefix are for personal expenses; those without (e.g., `売上原価`, `旅費交通費`) are for business/確定申告 purposes.
 
@@ -114,7 +81,8 @@ Open the URL shown in the console (usually http://localhost:5173/) in your brows
 
 ```
 ├── config/               # Default config files (git-tracked)
-│   └── bankwiseColumnMapping.json
+│   ├── bankwiseColumnMapping.json
+│   └── baseCategories.json
 ├── src/
 │   ├── components/       # React components (Dashboard, TransactionTable, CategoryEditor, etc.)
 │   ├── utils/
