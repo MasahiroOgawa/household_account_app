@@ -44,7 +44,8 @@ const getJapaneseKamokuKeys = (): { income: Set<string>; expense: Set<string> } 
 
 export const isBusinessTransaction = (t: Transaction): boolean => {
   const keys = getJapaneseKamokuKeys();
-  return keys.income.has(t.category) || keys.expense.has(t.category);
+  return (t.type === 'income' && keys.income.has(t.category))
+    || (t.type === 'expense' && keys.expense.has(t.category));
 };
 
 export const calculateBlueReturn = (transactions: Transaction[], year: number): BlueReturnData => {
@@ -62,22 +63,20 @@ export const calculateBlueReturn = (transactions: Transaction[], year: number): 
     const month = new Date(t.date).getMonth(); // 0-based
     const amt = Math.abs(t.amount);
 
-    if (keys.income.has(t.category) || keys.expense.has(t.category)) {
-      // Business transaction
-      if (t.type === 'income') {
-        revenue += amt;
-        monthlyRevenue[month] += amt;
-      } else {
-        kamokuTotals[t.category] = (kamokuTotals[t.category] || 0) + amt;
-        monthlyExpenses[month] += amt;
-      }
-    } else if (t.category.startsWith('private-')) {
-      // Private transaction through business account
-      if (t.type === 'expense') {
-        jigyounushiKashi += amt;
-      } else {
-        jigyounushiKari += amt;
-      }
+    if (t.type === 'income' && keys.income.has(t.category)) {
+      // Business income: only Japanese income subcategories (売上, 雑収入) count as revenue
+      revenue += amt;
+      monthlyRevenue[month] += amt;
+    } else if (t.type === 'expense' && keys.expense.has(t.category)) {
+      // Business expense: only Japanese expense subcategories count as 経費
+      kamokuTotals[t.category] = (kamokuTotals[t.category] || 0) + amt;
+      monthlyExpenses[month] += amt;
+    } else if (t.type === 'expense') {
+      // Private expense through business account → 事業主貸
+      jigyounushiKashi += amt;
+    } else {
+      // Private income through business account → 事業主借
+      jigyounushiKari += amt;
     }
   }
 
