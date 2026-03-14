@@ -59,13 +59,9 @@ export const CategoryEditor: React.FC = () => {
     if (filterMode === 'others') {
       entries = entries.filter(([, value]) => {
         if (typeof value === 'string') {
-          const incResolved = resolveCategory(value, 'income');
-          const expResolved = resolveCategory(value, 'expense');
-          return incResolved === 'other_income' && expResolved === 'other_expense';
+          return resolveCategory(value, 'expense') === 'other_expense';
         }
-        const incResolved = resolveCategory(value.income, 'income');
-        const expResolved = resolveCategory(value.expense, 'expense');
-        return incResolved === 'other_income' && expResolved === 'other_expense';
+        return resolveCategory(value.expense, 'expense') === 'other_expense';
       });
     }
 
@@ -146,7 +142,7 @@ export const CategoryEditor: React.FC = () => {
                 : 'bg-white text-black hover:bg-gray-100'
             }`}
           >
-            Others Only
+            Other Expense Only
           </button>
           <button
             onClick={() => setFilterMode('all')}
