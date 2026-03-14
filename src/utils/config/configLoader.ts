@@ -1,10 +1,9 @@
 import { columnMappingData } from './columnMappingData';
-import sampleCategoryMapping from '../../../sample_data/categoryMapping.json';
 import dataCategoryMapping from '../../../data/categoryMapping.json';
 import { CategoryMapping } from '../../types/Category';
 import { ColumnMapping } from '../../types/ColumnMapping';
 
-const categoryMappingDefault = dataCategoryMapping || sampleCategoryMapping;
+const categoryMappingDefault = dataCategoryMapping || { categories: { income: [], expense: [] }, subcategories: {}, mappings: {} };
 
 class ConfigLoader {
   private categoryMapping: CategoryMapping;
