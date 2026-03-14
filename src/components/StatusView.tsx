@@ -1,7 +1,7 @@
 import React from 'react';
 import { Transaction } from '../types/Transaction';
 import { BarChart3, PieChart } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import { calculateMonthlyTotals } from '../utils/monthlyCalculations';
 import { getCategoryColor, getIncomeCategoryColor } from '../utils/category/categoryColors';
 import { getCategoryDisplayName, normalizeCategory } from '../utils/category/categoryDisplay';
@@ -46,10 +46,11 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
   const positiveIncomeTotal = topIncomeCategories.reduce((s, [, a]) => s + a, 0);
   const positiveExpenseTotal = topExpenseCategories.reduce((s, [, a]) => s + a, 0);
 
-  // Monthly data
-  const now = new Date();
-  const twelveMonthsAgo = subMonths(now, 11);
-  const months = eachMonthOfInterval({ start: twelveMonthsAgo, end: now });
+  // Monthly data — derive range from actual transaction dates
+  const transactionDates = filteredTransactions.map(t => new Date(t.date));
+  const earliestDate = transactionDates.length > 0 ? new Date(Math.min(...transactionDates.map(d => d.getTime()))) : new Date();
+  const latestDate = transactionDates.length > 0 ? new Date(Math.max(...transactionDates.map(d => d.getTime()))) : new Date();
+  const months = eachMonthOfInterval({ start: startOfMonth(earliestDate), end: endOfMonth(latestDate) });
 
   const monthlyData: MonthlyBarData[] = months.map(month => {
     const monthStart = startOfMonth(month);
