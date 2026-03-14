@@ -69,8 +69,8 @@ export const getCategoryType = (category: string): 'income' | 'expense' | 'trans
   const info = categoryDisplayInfo[category.toLowerCase()];
   if (info) return info.type;
 
-  const incomeCategories = ['salary', 'revenue', 'company_refund', 'country_refund', 'withdraw', 'other_income',
-    'private-salary', 'private-revenue', 'private-company_refund', 'private-tax_refund', 'private-withdraw', 'private-other_income'];
+  const incomeCategories = ['salary', 'revenue', 'company_refund', 'country_refund', 'deposit', 'other_income',
+    'private-salary', 'private-revenue', 'private-company_refund', 'private-tax_refund', 'private-deposit', 'private-other_income'];
   if (incomeCategories.includes(category.toLowerCase())) return 'income';
 
   const categoryConfig = configLoader.getCategoryMapping();
@@ -93,7 +93,7 @@ export const getCategoryType = (category: string): 'income' | 'expense' | 'trans
 
 export const getAllCategories = (): { income: string[]; expense: string[] } => {
   return {
-    income: ['salary', 'revenue', 'company_refund', 'country_refund', 'withdraw', 'other_income'],
-    expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'other_expense'],
+    income: ['salary', 'revenue', 'company_refund', 'country_refund', 'deposit', 'other_income'],
+    expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'withdraw', 'other_expense'],
   };
 };

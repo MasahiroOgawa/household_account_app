@@ -6,8 +6,8 @@ describe('detectCategory', () => {
     expect(detectCategory('給与振込', 'income')).toBe('private-salary');
   });
 
-  it('detects withdraw for ATM', () => {
-    expect(detectCategory('ATM出金', 'income')).toBe('private-withdraw');
+  it('detects deposit for ATM', () => {
+    expect(detectCategory('ATM出金', 'income')).toBe('private-deposit');
   });
 
   it('returns private-other_expense for unknown expense', () => {

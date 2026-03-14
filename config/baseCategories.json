@@ -5,7 +5,7 @@
       "revenue",
       "company_refund",
       "tax_refund",
-      "withdraw",
+      "deposit",
       "internal_transfer",
       "other_income"
     ],
@@ -23,6 +23,7 @@
       "gift",
       "beauty",
       "fee",
+      "withdraw",
       "internal_transfer",
       "other_expense"
     ]
@@ -35,7 +36,7 @@
       "private-revenue": "revenue",
       "private-company_refund": "company_refund",
       "private-tax_refund": "tax_refund",
-      "private-withdraw": "withdraw",
+      "private-deposit": "deposit",
       "private-internal_transfer": "internal_transfer",
       "private-other_income": "other_income"
     },
@@ -77,6 +78,7 @@
       "private-gift": "gift",
       "private-beauty": "beauty",
       "private-fee": "fee",
+      "private-withdraw": "withdraw",
       "private-internal_transfer": "internal_transfer",
       "private-other_expense": "other_expense"
     }

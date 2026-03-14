@@ -72,6 +72,20 @@
       "dateFormat": "YYYY/MM/DD"
     },
 
+    "yuucho": {
+      "name": "ゆうちょ銀行",
+      "columns": {
+        "date": 0,
+        "description": 6,
+        "shopName": 7,
+        "withdrawal": 5,
+        "deposit": 3
+      },
+      "encoding": "shift-jis",
+      "skipRows": 8,
+      "dateFormat": "YYYYMMDD"
+    },
+
     "transaction_result": {
       "name": "Transaction Result",
       "columns": {
@@ -134,6 +148,10 @@
       "headerPatterns": ["年月日", "お引出し", "お預け入れ"],
       "fileNamePattern": "meisai|smbc"
     },
+    "yuucho": {
+      "headerPatterns": ["お客さま口座情報"],
+      "fileNamePattern": "yuucho|yucho"
+    },
     "transaction_result": {
       "headerPatterns": ["Date", "Time", "Amount", "Type", "Description", "Category", "Shop Name", "Source"],
       "fileNamePattern": "transactions_|kakutei_shinkoku_"
@@ -154,5 +172,10 @@
     "残高移動"
   ],
 
-  "feePatterns": ["手数料", "ATM手数料", "振込手数料", "時間外手数料"]
+  "internalTransferExclusions": [
+    "電信振替",
+    "振込払出"
+  ],
+
+  "feePatterns": ["手数料", "ATM手数料", "振込手数料", "時間外手数料", "料金"]
 }

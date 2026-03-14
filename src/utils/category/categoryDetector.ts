@@ -45,7 +45,7 @@ export const detectCategory = (description: string, transactionType?: 'income' |
     if (lowerDescription.includes('atm') || lowerDescription.includes('ａｔｍ') ||
         lowerDescription.includes('出金') || lowerDescription.includes('引出') ||
         lowerDescription.includes('引き出') || lowerDescription.includes('現金')) {
-      return 'private-withdraw';
+      return 'private-deposit';
     }
     if (lowerDescription.includes('給与') || lowerDescription.includes('給料') ||
         lowerDescription.includes('賞与') || lowerDescription.includes('salary') ||
@@ -80,6 +80,10 @@ export const detectCategory = (description: string, transactionType?: 'income' |
 export const isInternalTransfer = (description: string): boolean => {
   const mapping = configLoader.getColumnMapping();
   const lowerDescription = description.toLowerCase();
+  const excluded = mapping.internalTransferExclusions?.some(pattern =>
+    lowerDescription.includes(pattern.toLowerCase())
+  );
+  if (excluded) return false;
   return mapping.internalTransferPatterns.some(pattern =>
     lowerDescription.includes(pattern.toLowerCase())
   );

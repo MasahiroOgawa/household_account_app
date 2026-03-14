@@ -156,8 +156,16 @@ export const buildTransaction = (
     return null;
   }
 
-  const shopName = extractShopName(description);
-  const category = detectCategory(description, transactionType);
+  // Extract shopName: use dedicated column if configured, otherwise extract from description
+  const shopNameCol = typeof columns.shopName === 'number' ? columns.shopName as number : -1;
+  const rawShopName = (shopNameCol >= 0 && shopNameCol < row.length)
+    ? (row[shopNameCol] || '').trim() : '';
+  const shopName = rawShopName || extractShopName(description);
+
+  // Auto-categorize fee rows (e.g. Yuucho "料金" with no counterpart in shopName column)
+  const category = (isFee(description) && shopNameCol >= 0 && !rawShopName)
+    ? (transactionType === 'expense' ? 'private-withdraw' : 'private-deposit')
+    : detectCategory(shopName || description, transactionType);
   const sourceName = sourceConfig.name || sourceType;
 
   return {

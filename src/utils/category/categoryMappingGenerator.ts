@@ -9,15 +9,15 @@ export interface CategoryMappingStructure {
 }
 
 const defaultCategories = {
-  income: ['salary', 'company_refund', 'country_refund', 'withdraw', 'other_income'],
+  income: ['salary', 'company_refund', 'country_refund', 'deposit', 'other_income'],
   expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'other_expense'],
 };
 
 const commonPatterns: Record<string, string> = {
   '給与': 'salary', '給料': 'salary', '賞与': 'salary', 'ボーナス': 'salary',
   '還付': 'country_refund', '返金': 'company_refund', '払戻': 'company_refund',
-  '出金': 'withdraw', 'ATM': 'withdraw', '引出': 'withdraw', '現金': 'withdraw',
-  'ＡＴＭ': 'withdraw', '引き出し': 'withdraw',
+  '出金': 'deposit', 'ATM': 'deposit', '引出': 'deposit', '現金': 'deposit',
+  'ＡＴＭ': 'deposit', '引き出し': 'deposit',
   'スーパー': 'grocery', 'イオン': 'grocery', 'セブンイレブン': 'grocery',
   'セブン-イレブン': 'grocery', 'ローソン': 'grocery', 'ファミリーマート': 'grocery',
   'ファミマ': 'grocery', '西友': 'grocery', 'まいばすけっと': 'grocery',
@@ -56,7 +56,7 @@ const detectPatternCategory = (description: string, transactionType: 'income' | 
     if (lowerDesc.includes('給') || lowerDesc.includes('salary')) return 'salary';
     if (lowerDesc.includes('還付') || lowerDesc.includes('refund')) return 'country_refund';
     if (lowerDesc.includes('返金')) return 'company_refund';
-    if (lowerDesc.includes('atm') || lowerDesc.includes('出金')) return 'withdraw';
+    if (lowerDesc.includes('atm') || lowerDesc.includes('出金')) return 'deposit';
     if (lowerDesc.includes('振込')) return 'other_income';
     return 'other_income';
   }

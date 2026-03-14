@@ -22,5 +22,6 @@ export interface ColumnMapping {
   customMappings?: Record<string, SourceConfig>;
   detectionRules: Record<string, DetectionRule>;
   internalTransferPatterns: string[];
+  internalTransferExclusions?: string[];
   feePatterns: string[];
 }
