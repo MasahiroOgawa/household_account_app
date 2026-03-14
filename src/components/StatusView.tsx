@@ -8,6 +8,7 @@ import { getCategoryDisplayName, normalizeCategory } from '../utils/category/cat
 import { resolveToEnglishCategory } from '../utils/category/subcategoryUtils';
 import { PieChartSVG } from './charts/PieChart';
 import { PieChartLegend } from './charts/PieChartLegend';
+import { formatAmount } from '../utils/formatAmount';
 import { MonthlyBarChart, MonthlyBarData } from './charts/BarChart';
 
 interface StatusViewProps {
@@ -136,7 +137,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                   <PieChartSVG
                     slices={incomeSlices}
                     total={positiveIncomeTotal}
-                    centerLabel={`¥${Math.round(totalIncome / 1000)}k`}
+                    centerLabel={`¥${formatAmount(Math.round(totalIncome))}`}
                     centerColor="text-cyan-600"
                     borderColor="border-cyan-200"
                   />
@@ -160,7 +161,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
                   <PieChartSVG
                     slices={expenseSlices}
                     total={positiveExpenseTotal}
-                    centerLabel={`¥${Math.round(totalExpenses / 1000)}k`}
+                    centerLabel={`¥${formatAmount(Math.round(totalExpenses))}`}
                     centerColor="text-red-600"
                     borderColor="border-red-200"
                   />

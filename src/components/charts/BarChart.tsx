@@ -2,6 +2,7 @@ import React from 'react';
 import { BarChart3 } from 'lucide-react';
 import { getCategoryColor, getIncomeCategoryColor } from '../../utils/category/categoryColors';
 import { getCategoryDisplayName } from '../../utils/category/categoryDisplay';
+import { formatAmount } from '../../utils/formatAmount';
 
 export interface MonthlyBarData {
   month: string;
@@ -29,16 +30,6 @@ const getNiceRoundMax = (value: number): number => {
   return Math.ceil(value / 1000000) * 1000000;
 };
 
-const formatAmount = (amount: number): string => {
-  if (amount >= 1000000) {
-    const millions = amount / 1000000;
-    return millions % 1 === 0 ? `${millions}M` : `${millions.toFixed(1)}M`;
-  } else if (amount >= 1000) {
-    const thousands = amount / 1000;
-    return thousands % 1 === 0 ? `${thousands}k` : `${thousands.toFixed(0)}k`;
-  }
-  return amount.toString();
-};
 
 export const MonthlyBarChart: React.FC<BarChartProps> = ({ data }) => {
   const rawMax = Math.max(...data.map(d => Math.max(d.income, d.expenses)), 100);
@@ -131,7 +122,7 @@ export const MonthlyBarChart: React.FC<BarChartProps> = ({ data }) => {
                         ))}
                       {incomeHeight > 35 && d.income > 0 && (
                         <div style={{ position: 'absolute', top: '2px', left: '0', right: '0', textAlign: 'center', color: 'white', fontSize: '9px', fontWeight: 'bold', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                          ¥{Math.round(d.income / 1000)}k
+                          ¥{formatAmount(Math.round(d.income))}
                         </div>
                       )}
                     </div>
@@ -154,7 +145,7 @@ export const MonthlyBarChart: React.FC<BarChartProps> = ({ data }) => {
                       ))}
                       {expenseHeight > 35 && positiveExpenseSum > 0 && (
                         <div style={{ position: 'absolute', top: '2px', left: '0', right: '0', textAlign: 'center', color: 'white', fontSize: '9px', fontWeight: 'bold', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                          ¥{Math.round(positiveExpenseSum / 1000)}k
+                          ¥{formatAmount(Math.round(positiveExpenseSum))}
                         </div>
                       )}
                     </div>
