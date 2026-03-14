@@ -1,9 +1,11 @@
 import { columnMappingData } from './columnMappingData';
-import dataCategoryMapping from '../../../data/categoryMapping.json';
 import { CategoryMapping } from '../../types/Category';
 import { ColumnMapping } from '../../types/ColumnMapping';
 
-const categoryMappingDefault = dataCategoryMapping || { categories: { income: [], expense: [] }, subcategories: {}, mappings: {} };
+const dataModules = import.meta.glob('../../../data/categoryMapping.json', { eager: true, import: 'default' });
+const dataCategoryMapping = Object.values(dataModules)[0] as CategoryMapping | undefined;
+
+const categoryMappingDefault: CategoryMapping = dataCategoryMapping || { categories: { income: [], expense: [] }, subcategories: { income: {}, expense: {} }, mappings: {} };
 
 class ConfigLoader {
   private categoryMapping: CategoryMapping;
