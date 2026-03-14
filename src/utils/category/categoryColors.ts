@@ -24,7 +24,7 @@ export const categoryDisplayInfo: Record<string, CategoryDisplayInfo> = {
   'invest': { name: 'Investment', color: '#ef4444', type: 'expense' },
   'education': { name: 'Education', color: '#f87171', type: 'expense' },
   'grocery': { name: 'Grocery', color: '#dc2626', type: 'expense' },
-  'wear': { name: 'Clothing/Wear', color: '#fca5a5', type: 'expense' },
+  'wear': { name: 'Wear', color: '#fca5a5', type: 'expense' },
   'housing': { name: 'Housing', color: '#b91c1c', type: 'expense' },
   'utility': { name: 'Utility Cost', color: '#f97316', type: 'expense' },
   'medical': { name: 'Medical Expenses', color: '#e11d48', type: 'expense' },
