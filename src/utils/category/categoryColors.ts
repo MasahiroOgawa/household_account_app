@@ -33,6 +33,7 @@ export const categoryDisplayInfo: Record<string, CategoryDisplayInfo> = {
   'insurance': { name: 'Insurance', color: '#fb7185', type: 'expense' },
   'fee': { name: 'Fee', color: '#fdba74', type: 'expense' },
   'yuka': { name: 'Yuka', color: '#f0abfc', type: 'expense' },
+  'beauty': { name: 'Beauty', color: '#e879f9', type: 'expense' },
   'internal_transfer': { name: 'Internal Transfer', color: '#64748b', type: 'expense' },
   'transit': { name: 'Transit', color: '#ea580c', type: 'expense' },
   'tax': { name: 'Tax', color: '#991b1b', type: 'expense' },
