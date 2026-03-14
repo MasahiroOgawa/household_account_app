@@ -18,11 +18,15 @@ export const detectCategory = (description: string, transactionType?: 'income' |
   if (mapping.mappings[description]) {
     return resolveMappingValue(mapping.mappings[description], transactionType);
   }
+  // Also try normalized description (fullwidth spaces → ASCII)
+  if (mapping.mappings[normalizedDescription]) {
+    return resolveMappingValue(mapping.mappings[normalizedDescription], transactionType);
+  }
 
-  // Prefix match
+  // Prefix match (strip trailing "..." from truncated shopName keys)
   for (const [keyword, value] of Object.entries(mapping.mappings)) {
-    const normalizedKeyword = normalizeWhitespace(keyword);
-    if (normalizedDescription.startsWith(normalizedKeyword)) {
+    const normalizedKeyword = normalizeWhitespace(keyword).replace(/\.{3}$/, '');
+    if (normalizedKeyword && normalizedDescription.startsWith(normalizedKeyword)) {
       return resolveMappingValue(value, transactionType);
     }
   }
@@ -30,8 +34,8 @@ export const detectCategory = (description: string, transactionType?: 'income' |
   // Partial match (contains)
   const lowerDescription = normalizedDescription.toLowerCase();
   for (const [keyword, value] of Object.entries(mapping.mappings)) {
-    const normalizedKeyword = normalizeWhitespace(keyword).toLowerCase();
-    if (lowerDescription.includes(normalizedKeyword)) {
+    const normalizedKeyword = normalizeWhitespace(keyword).replace(/\.{3}$/, '').toLowerCase();
+    if (normalizedKeyword && lowerDescription.includes(normalizedKeyword)) {
       return resolveMappingValue(value, transactionType);
     }
   }
