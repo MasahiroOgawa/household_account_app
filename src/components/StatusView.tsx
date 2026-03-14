@@ -30,7 +30,10 @@ const aggregateByCategory = (transactions: Transaction[], type: 'income' | 'expe
 };
 
 export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
-  const filteredTransactions = transactions.filter(t => t.category !== 'internal_transfer');
+  const filteredTransactions = transactions.filter(t => {
+    const resolved = resolveToEnglishCategory(normalizeCategory(t.category || ''), t.type);
+    return resolved !== 'internal_transfer';
+  });
 
   const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')

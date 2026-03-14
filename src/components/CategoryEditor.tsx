@@ -39,14 +39,11 @@ export const CategoryEditor: React.FC = () => {
 
   // Build dropdown options split by income/expense
   const { incomeDropdownOptions, expenseDropdownOptions } = useMemo(() => {
-    const categories = categoryMapping.categories as { income?: string[]; expense?: string[] };
-    const incomeMainCats = Array.isArray(categories.income) ? categories.income : [];
-    const expenseMainCats = Array.isArray(categories.expense) ? categories.expense : [];
     return {
-      incomeDropdownOptions: [...new Set([...Object.keys(incomeSubcategories), ...incomeMainCats])].sort(),
-      expenseDropdownOptions: [...new Set([...Object.keys(expenseSubcategories), ...expenseMainCats])].sort(),
+      incomeDropdownOptions: Object.keys(incomeSubcategories).sort(),
+      expenseDropdownOptions: Object.keys(expenseSubcategories).sort(),
     };
-  }, [incomeSubcategories, expenseSubcategories, categoryMapping.categories]);
+  }, [incomeSubcategories, expenseSubcategories]);
 
   const resolveCategory = useCallback(
     (raw: string, type: 'income' | 'expense') => {
