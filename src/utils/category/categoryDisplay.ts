@@ -33,7 +33,8 @@ export const normalizeCategory = (category: string): string => {
 
   // Handle private-* prefix: normalize the base part, keep prefix
   if (trimmed.startsWith('private-')) {
-    return `private-${normalizeCategory(trimmed.slice(8))}`;
+    const base = trimmed.slice(8).trim().toLowerCase().replace(/\s+/g, '_');
+    return `private-${base}`;
   }
 
   // Already a valid subcategory key (Japanese 勘定科目)
