@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Transaction } from '../types/Transaction';
 import { calculateBlueReturn, getSortedKamoku, getAvailableYears, BlueReturnData } from '../utils/blueReturnCalculator';
+import { parsePreviousYearPdf } from '../utils/blueReturnPdfParser';
 
 interface BlueReturnViewProps {
   transactions: Transaction[];
@@ -55,8 +56,18 @@ interface BalanceSheetState {
   depositStart: number;
   accountsReceivableStart: number;
   accountsReceivableEnd: number;
+  inventoryStart: number;
+  inventoryEnd: number;
+  buildingStart: number;
+  buildingEnd: number;
+  buildingEquipmentStart: number;
+  buildingEquipmentEnd: number;
+  toolsStart: number;
+  toolsEnd: number;
   accountsPayableStart: number;
   accountsPayableEnd: number;
+  unpaidStart: number;
+  unpaidEnd: number;
   motoirekin: number;
 }
 
@@ -65,8 +76,18 @@ const defaultBalanceSheet: BalanceSheetState = {
   depositStart: 0,
   accountsReceivableStart: 0,
   accountsReceivableEnd: 0,
+  inventoryStart: 0,
+  inventoryEnd: 0,
+  buildingStart: 0,
+  buildingEnd: 0,
+  buildingEquipmentStart: 0,
+  buildingEquipmentEnd: 0,
+  toolsStart: 0,
+  toolsEnd: 0,
   accountsPayableStart: 0,
   accountsPayableEnd: 0,
+  unpaidStart: 0,
+  unpaidEnd: 0,
   motoirekin: 0,
 };
 
@@ -75,6 +96,40 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   const [selectedYear, setSelectedYear] = useState<number>(years[0] || new Date().getFullYear());
   const [bs, setBs] = useState<BalanceSheetState>(defaultBalanceSheet);
   const [kajianbun, setKajianbun] = useState<KajianbunState>(defaultKajianbun);
+
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const [pdfStatus, setPdfStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [pdfError, setPdfError] = useState('');
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPdfStatus('loading');
+    setPdfError('');
+    try {
+      const prev = await parsePreviousYearPdf(file);
+      const newMotoirekin = prev.motoirekin + prev.jigyounushiKari - prev.jigyounushiKashi + prev.shotokuBeforeDeduction;
+      setBs(p => ({
+        ...p,
+        cashStart: prev.cash,
+        depositStart: prev.deposit,
+        accountsReceivableStart: prev.accountsReceivable,
+        inventoryStart: prev.inventory,
+        buildingStart: prev.building,
+        buildingEquipmentStart: prev.buildingEquipment,
+        toolsStart: prev.tools,
+        accountsPayableStart: prev.accountsPayable,
+        unpaidStart: prev.unpaid,
+        motoirekin: newMotoirekin,
+      }));
+      setPdfStatus('success');
+    } catch (err) {
+      setPdfStatus('error');
+      setPdfError(err instanceof Error ? err.message : 'PDF読み込みに失敗しました');
+    }
+    // Reset input so same file can be re-uploaded
+    e.target.value = '';
+  };
 
   const data: BlueReturnData = useMemo(
     () => calculateBlueReturn(transactions, selectedYear),
@@ -118,6 +173,24 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
         className="w-full text-right border border-gray-300 rounded px-2 py-0.5"
       />
     </td>
+  );
+
+  const BsRow: React.FC<{
+    label: string;
+    startField: keyof BalanceSheetState;
+    endField?: keyof BalanceSheetState;
+    endValue?: number;
+    endEditable?: boolean;
+  }> = ({ label, startField, endField, endValue, endEditable = true }) => (
+    <tr>
+      <td className="border border-gray-300 px-3 py-1">{label}</td>
+      <EditableCell field={startField} value={bs[startField]} />
+      {endEditable && endField ? (
+        <EditableCell field={endField} value={bs[endField]} />
+      ) : (
+        <CopyCell value={endValue ?? bs[startField]} className="border border-gray-300" />
+      )}
+    </tr>
   );
 
   return (
@@ -246,7 +319,29 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
       </table>
 
       {/* Section 3: 貸借対照表 */}
-      <SectionTitle>貸借対照表（12月31日現在）</SectionTitle>
+      <div className="flex items-center justify-between mt-6 mb-2 border-b-2 border-black pb-1">
+        <h3 className="text-lg font-bold">貸借対照表（12月31日現在）</h3>
+        <div className="flex items-center gap-2">
+          <input type="file" accept=".pdf" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" />
+          <button
+            onClick={() => pdfInputRef.current?.click()}
+            disabled={pdfStatus === 'loading'}
+            className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+          >
+            {pdfStatus === 'loading' ? '読込中...' : '前年の決算書PDFを読み込む'}
+          </button>
+        </div>
+      </div>
+      {pdfStatus === 'success' && (
+        <div className="mb-2 p-2 bg-green-50 border border-green-300 rounded text-sm text-green-800">
+          前年の決算書から期首残高と元入金を読み込みました。
+        </div>
+      )}
+      {pdfStatus === 'error' && (
+        <div className="mb-2 p-2 bg-red-50 border border-red-300 rounded text-sm text-red-800">
+          {pdfError}
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         {/* 資産の部 */}
         <div>
@@ -260,28 +355,13 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="border border-gray-300 px-3 py-1">現金</td>
-                <EditableCell field="cashStart" value={bs.cashStart} />
-                <CopyCell value={bs.cashStart} className="border border-gray-300" />
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-1">その他の預金</td>
-                <EditableCell field="depositStart" value={bs.depositStart} />
-                <CopyCell value={depositEnd} className="border border-gray-300" />
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-1">売掛金</td>
-                <EditableCell field="accountsReceivableStart" value={bs.accountsReceivableStart} />
-                <td className="px-3 py-1">
-                  <input
-                    type="number"
-                    value={bs.accountsReceivableEnd || ''}
-                    onChange={e => updateBs('accountsReceivableEnd', e.target.value)}
-                    className="w-full text-right border border-gray-300 rounded px-2 py-0.5"
-                  />
-                </td>
-              </tr>
+              <BsRow label="現金" startField="cashStart" endEditable={false} />
+              <BsRow label="その他の預金" startField="depositStart" endValue={depositEnd} endEditable={false} />
+              <BsRow label="売掛金" startField="accountsReceivableStart" endField="accountsReceivableEnd" />
+              <BsRow label="棚卸資産" startField="inventoryStart" endField="inventoryEnd" />
+              <BsRow label="建物" startField="buildingStart" endField="buildingEnd" />
+              <BsRow label="建物附属設備" startField="buildingEquipmentStart" endField="buildingEquipmentEnd" />
+              <BsRow label="工具器具備品" startField="toolsStart" endField="toolsEnd" />
             </tbody>
           </table>
         </div>
@@ -298,18 +378,8 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="border border-gray-300 px-3 py-1">買掛金</td>
-                <EditableCell field="accountsPayableStart" value={bs.accountsPayableStart} />
-                <td className="px-3 py-1">
-                  <input
-                    type="number"
-                    value={bs.accountsPayableEnd || ''}
-                    onChange={e => updateBs('accountsPayableEnd', e.target.value)}
-                    className="w-full text-right border border-gray-300 rounded px-2 py-0.5"
-                  />
-                </td>
-              </tr>
+              <BsRow label="買掛金" startField="accountsPayableStart" endField="accountsPayableEnd" />
+              <BsRow label="未払金" startField="unpaidStart" endField="unpaidEnd" />
               <tr>
                 <td className="border border-gray-300 px-3 py-1">事業主貸</td>
                 <td className="border border-gray-300 px-3 py-1 text-right text-gray-400">-</td>
@@ -334,7 +404,8 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
         <p className="font-bold mb-1">使い方:</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>金額をクリックするとクリップボードにコピーされます</li>
-          <li>期首の金額は手動で入力してください（前年の期末残高を転記）</li>
+          <li>「前年の決算書PDFを読み込む」で期首残高と元入金を自動入力できます（e-TaxのPDFに対応）</li>
+          <li>期首の金額は手動でも入力できます（前年の期末残高を転記）</li>
           <li>「その他の預金」期末は自動計算: 期首 + 売上 - 経費 - 事業主貸 + 事業主借</li>
           <li>国税庁 確定申告書等作成コーナー (keisan.nta.go.jp) に値を転記してください</li>
         </ul>
