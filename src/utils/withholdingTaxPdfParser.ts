@@ -39,109 +39,81 @@ const parseNumber = (s: string): number => {
   return isNaN(n) ? 0 : n;
 };
 
-// Find number adjacent to a label (nearby Y coordinate, to the right)
-const findValueNearLabel = (items: TextItem[], labelPattern: RegExp, opts?: { yTolerance?: number }): number => {
-  const tolerance = opts?.yTolerance ?? 8;
-  const labelItem = items.find(i => labelPattern.test(i.str));
-  if (!labelItem) return 0;
-
-  // Find the closest number to the right on the same row
-  const candidates = items
-    .filter(i =>
-      Math.abs(i.y - labelItem.y) <= tolerance &&
-      i.x > labelItem.x &&
-      /[\d,]+/.test(i.str) &&
-      parseNumber(i.str) > 0
-    )
-    .sort((a, b) => a.x - b.x);
-
-  return candidates.length > 0 ? parseNumber(candidates[0].str) : 0;
+// Find a numeric value within a bounding box (x/y range)
+const findNumberInBox = (items: TextItem[], xMin: number, xMax: number, yMin: number, yMax: number): number => {
+  const candidates = items.filter(i =>
+    i.x >= xMin && i.x <= xMax &&
+    i.y >= yMin && i.y <= yMax &&
+    /[\d,]/.test(i.str) &&
+    parseNumber(i.str) > 0
+  );
+  // Return the largest number found (the actual value, not stray digits)
+  if (candidates.length === 0) return 0;
+  return Math.max(...candidates.map(c => parseNumber(c.str)));
 };
 
-// Parse by grouping items into rows and matching known field patterns
-const parseByRowStructure = (items: TextItem[]): WithholdingTaxData => {
-  const data: WithholdingTaxData = {
-    grossSalary: 0,
-    salaryIncomeAfterDeduction: 0,
-    totalDeductions: 0,
-    withheldTax: 0,
-    socialInsurance: 0,
-    lifeInsuranceDeduction: 0,
-    earthquakeInsuranceDeduction: 0,
-    basicDeduction: 0,
-    oldLifeInsurancePremium: 0,
-    newLifeInsurancePremium: 0,
-    medicalInsurancePremium: 0,
-    oldPensionInsurancePremium: 0,
-    newPensionInsurancePremium: 0,
+// 源泉徴収票 PDF coordinate-based parsing
+// Based on the standard e-Tax PDF layout:
+//
+// Row 1 (y~497 labels, y~474-478 values):
+//   支払金額      x: 90-165    value at x~132
+//   給与所得控除後  x: 170-250   value at x~213
+//   所得控除の額   x: 250-330   value at x~291
+//   源泉徴収税額   x: 330-410   value at x~374
+//
+// Row 2 (y~413 labels, y~394-398 values):
+//   特定親族特別控除  x: 15-90    value at x~77
+//   社会保険料等     x: 90-170   value at x~135
+//   生命保険料控除   x: 170-250  value at x~221
+//   地震保険料控除   x: 250-330  value at x~301
+//   住宅借入金等控除  x: 330-410  value at x~390
+//
+// Row 3 (y~337 labels, y~335 values) - 生命保険料の金額内訳:
+//   新生命保険料   x: 30-100   value at x~103
+//   旧生命保険料   x: 100-175  value at x~162
+//   介護医療保険料  x: 175-250  value at x~251
+//   新個人年金保険料 x: 250-330  value at x~323
+//   旧個人年金保険料 x: 330-410  value at x~395
+//
+// 基礎控除の額: y~268-272, x~265-330, value at x~309
+
+const parseByCoordinates = (items: TextItem[]): WithholdingTaxData => {
+  // Row 1: Main 4 fields (labels y~497, values y~470-485)
+  const grossSalary = findNumberInBox(items, 90, 170, 465, 490);
+  const salaryIncomeAfterDeduction = findNumberInBox(items, 170, 255, 465, 490);
+  const totalDeductions = findNumberInBox(items, 255, 335, 465, 490);
+  const withheldTax = findNumberInBox(items, 335, 410, 460, 490);
+
+  // Row 2: Deduction detail fields (labels y~413, values y~388-405)
+  const socialInsurance = findNumberInBox(items, 90, 175, 385, 410);
+  const lifeInsuranceDeduction = findNumberInBox(items, 175, 255, 385, 410);
+  const earthquakeInsuranceDeduction = findNumberInBox(items, 255, 335, 385, 410);
+
+  // Row 3: 生命保険料内訳 (labels y~333-337, values y~330-342)
+  const newLifeInsurancePremium = findNumberInBox(items, 30, 115, 325, 345);
+  const oldLifeInsurancePremium = findNumberInBox(items, 115, 190, 325, 345);
+  const medicalInsurancePremium = findNumberInBox(items, 190, 265, 325, 345);
+  const newPensionInsurancePremium = findNumberInBox(items, 265, 340, 325, 345);
+  const oldPensionInsurancePremium = findNumberInBox(items, 340, 415, 325, 345);
+
+  // 基礎控除の額 (y~268-280, x~265-330)
+  const basicDeduction = findNumberInBox(items, 265, 335, 262, 282);
+
+  return {
+    grossSalary,
+    salaryIncomeAfterDeduction,
+    totalDeductions,
+    withheldTax,
+    socialInsurance,
+    lifeInsuranceDeduction,
+    earthquakeInsuranceDeduction,
+    basicDeduction,
+    newLifeInsurancePremium,
+    oldLifeInsurancePremium,
+    medicalInsurancePremium,
+    newPensionInsurancePremium,
+    oldPensionInsurancePremium,
   };
-
-  // Sort items top-to-bottom (descending Y), left-to-right
-  const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
-
-  // 源泉徴収票 has a structured layout. Try to match fields by label proximity.
-  // Main row fields (top portion of the form)
-  data.grossSalary = findValueNearLabel(sorted, /支払金額/);
-  data.salaryIncomeAfterDeduction = findValueNearLabel(sorted, /給与所得控除後/);
-  data.totalDeductions = findValueNearLabel(sorted, /所得控除の額の合計/);
-  data.withheldTax = findValueNearLabel(sorted, /源泉徴収税額/);
-
-  // Insurance/deduction fields
-  data.socialInsurance = findValueNearLabel(sorted, /社会保険料等/);
-  data.lifeInsuranceDeduction = findValueNearLabel(sorted, /生命保険料の控除額/);
-  data.earthquakeInsuranceDeduction = findValueNearLabel(sorted, /地震保険料の控除額/);
-  data.basicDeduction = findValueNearLabel(sorted, /基礎控除の額/);
-
-  // 内訳 fields
-  data.oldLifeInsurancePremium = findValueNearLabel(sorted, /旧生命保険料の金額/);
-  data.newLifeInsurancePremium = findValueNearLabel(sorted, /新生命保険料の金額/);
-  data.medicalInsurancePremium = findValueNearLabel(sorted, /介護医療保険料/);
-  data.oldPensionInsurancePremium = findValueNearLabel(sorted, /旧個人年金保険料/);
-  data.newPensionInsurancePremium = findValueNearLabel(sorted, /新個人年金保険料/);
-
-  return data;
-};
-
-// Fallback: extract all numbers from the text in reading order and match by position
-// The standard 源泉徴収票 PDF has these numbers in a predictable top-row order:
-// 支払金額, 給与所得控除後の金額, 所得控除の額の合計額, 源泉徴収税額
-const parseByPosition = (items: TextItem[]): Partial<WithholdingTaxData> => {
-  // Get unique Y rows near the top portion
-  const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
-
-  // Group by Y (tolerance ±5)
-  const rows: TextItem[][] = [];
-  let currentRow: TextItem[] = [];
-  let lastY = -999;
-
-  for (const item of sorted) {
-    if (Math.abs(item.y - lastY) > 5) {
-      if (currentRow.length > 0) rows.push(currentRow);
-      currentRow = [item];
-      lastY = item.y;
-    } else {
-      currentRow.push(item);
-    }
-  }
-  if (currentRow.length > 0) rows.push(currentRow);
-
-  // Find the row with 4 large numbers (likely the main fields)
-  for (const row of rows) {
-    const numbers = row
-      .map(i => parseNumber(i.str))
-      .filter(n => n > 10000);
-
-    if (numbers.length >= 4) {
-      return {
-        grossSalary: numbers[0],
-        salaryIncomeAfterDeduction: numbers[1],
-        totalDeductions: numbers[2],
-        withheldTax: numbers[3],
-      };
-    }
-  }
-
-  return {};
 };
 
 export const parseWithholdingTaxPdf = async (file: File): Promise<WithholdingTaxData> => {
@@ -155,14 +127,5 @@ export const parseWithholdingTaxPdf = async (file: File): Promise<WithholdingTax
   const page = await doc.getPage(1);
   const items = await getTextItems(page);
 
-  // Primary: parse by label matching
-  const data = parseByRowStructure(items);
-
-  // Fallback for main 4 fields if label matching fails
-  if (data.grossSalary === 0) {
-    const fallback = parseByPosition(items);
-    Object.assign(data, fallback);
-  }
-
-  return data;
+  return parseByCoordinates(items);
 };
