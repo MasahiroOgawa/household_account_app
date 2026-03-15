@@ -312,8 +312,8 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
           ))}
           <tr className="bg-gray-50 font-bold">
             <td className="border border-gray-300 px-3 py-1">合計</td>
-            <CopyCell value={data.revenue} className="border border-gray-300 font-bold" />
-            <CopyCell value={adjusted.totalExpenses} className="border border-gray-300 font-bold" />
+            <CopyCell value={data.monthlyRevenue.reduce((s, v) => s + v, 0)} className="border border-gray-300 font-bold" />
+            <CopyCell value={data.monthlyExpenses.reduce((s, v) => s + v, 0)} className="border border-gray-300 font-bold" />
           </tr>
         </tbody>
       </table>
