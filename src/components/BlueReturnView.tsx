@@ -1,7 +1,13 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Transaction } from '../types/Transaction';
 import { calculateBlueReturn, getSortedKamoku, getAvailableYears, BlueReturnData } from '../utils/blueReturnCalculator';
 import { parsePreviousYearPdf } from '../utils/blueReturnPdfParser';
+import { WithholdingTaxData } from '../utils/withholdingTaxPdfParser';
+import { FurusatoDonation } from '../utils/furusatoTaxPdfParser';
+import { loadTaxFilingState, saveTaxFilingState } from '../utils/taxFilingState';
+import { WithholdingTaxSection } from './WithholdingTaxSection';
+import { FurusatoSection } from './FurusatoSection';
+import { TaxFormB } from './TaxFormB';
 
 interface BlueReturnViewProps {
   transactions: Transaction[];
@@ -91,11 +97,30 @@ const defaultBalanceSheet: BalanceSheetState = {
   motoirekin: 0,
 };
 
+type SubTab = 'kessan' | 'withholding' | 'furusato' | 'form_b';
+
 export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) => {
   const years = useMemo(() => getAvailableYears(transactions), [transactions]);
   const [selectedYear, setSelectedYear] = useState<number>(years[0] || new Date().getFullYear());
   const [bs, setBs] = useState<BalanceSheetState>(defaultBalanceSheet);
   const [kajianbun, setKajianbun] = useState<KajianbunState>(defaultKajianbun);
+  const [subTab, setSubTab] = useState<SubTab>('kessan');
+
+  // Tax filing persistent state
+  const [withholding, setWithholding] = useState<WithholdingTaxData | null>(null);
+  const [furusatoDonations, setFurusatoDonations] = useState<FurusatoDonation[]>([]);
+
+  // Load persisted state on mount
+  useEffect(() => {
+    const state = loadTaxFilingState();
+    if (state.withholding) setWithholding(state.withholding);
+    if (state.furusatoDonations.length > 0) setFurusatoDonations(state.furusatoDonations);
+  }, []);
+
+  // Persist state changes
+  useEffect(() => {
+    saveTaxFilingState({ withholding, furusatoDonations });
+  }, [withholding, furusatoDonations]);
 
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -127,7 +152,6 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
       setPdfStatus('error');
       setPdfError(err instanceof Error ? err.message : 'PDF読み込みに失敗しました');
     }
-    // Reset input so same file can be re-uploaded
     e.target.value = '';
   };
 
@@ -193,23 +217,15 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
     </tr>
   );
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">青色申告決算書</h2>
-        <select
-          value={selectedYear}
-          onChange={e => setSelectedYear(Number(e.target.value))}
-          className="border-2 border-black rounded px-3 py-1 text-lg"
-        >
-          {years.map(y => <option key={y} value={y}>{y}年</option>)}
-        </select>
-      </div>
+  const tabClass = (tab: SubTab) =>
+    `px-4 py-1.5 text-sm font-medium rounded-t border-t-2 border-x-2 transition-all ${
+      subTab === tab
+        ? 'bg-white text-black border-black -mb-px z-10 relative'
+        : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'
+    }`;
 
-      <p className="text-sm text-gray-600 mb-4">
-        金額セルをクリックするとコピーできます。e-Taxの確定申告書作成コーナーに貼り付けてください。
-      </p>
-
+  const renderKessanContent = () => (
+    <>
       {/* Section 1: 損益計算書 */}
       <SectionTitle>損益計算書</SectionTitle>
       <table className="w-full border-collapse border border-gray-300 text-sm">
@@ -399,17 +415,75 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
           </table>
         </div>
       </div>
+    </>
+  );
 
-      <div className="mt-6 p-4 bg-gray-50 border border-gray-300 rounded text-sm text-gray-700">
-        <p className="font-bold mb-1">使い方:</p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>金額をクリックするとクリップボードにコピーされます</li>
-          <li>「前年の決算書PDFを読み込む」で期首残高と元入金を自動入力できます（e-TaxのPDFに対応）</li>
-          <li>期首の金額は手動でも入力できます（前年の期末残高を転記）</li>
-          <li>「その他の預金」期末は自動計算: 期首 + 売上 - 経費 - 事業主貸 + 事業主借</li>
-          <li>国税庁 確定申告書等作成コーナー (keisan.nta.go.jp) に値を転記してください</li>
-        </ul>
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">確定申告</h2>
+        <select
+          value={selectedYear}
+          onChange={e => setSelectedYear(Number(e.target.value))}
+          className="border-2 border-black rounded px-3 py-1 text-lg"
+        >
+          {years.map(y => <option key={y} value={y}>{y}年</option>)}
+        </select>
       </div>
+
+      <p className="text-sm text-gray-600 mb-4">
+        金額セルをクリックするとコピーできます。e-Taxの確定申告書作成コーナーに貼り付けてください。
+      </p>
+
+      {/* Sub-tabs */}
+      <div className="flex space-x-1 border-b-2 border-black mb-4">
+        <button onClick={() => setSubTab('kessan')} className={tabClass('kessan')}>
+          青色申告決算書
+        </button>
+        <button onClick={() => setSubTab('withholding')} className={tabClass('withholding')}>
+          源泉徴収票
+        </button>
+        <button onClick={() => setSubTab('furusato')} className={tabClass('furusato')}>
+          ふるさと納税
+        </button>
+        <button onClick={() => setSubTab('form_b')} className={tabClass('form_b')}>
+          確定申告書B
+        </button>
+      </div>
+
+      {/* Sub-tab content */}
+      {subTab === 'kessan' && renderKessanContent()}
+
+      {subTab === 'withholding' && (
+        <WithholdingTaxSection data={withholding} onDataChange={setWithholding} />
+      )}
+
+      {subTab === 'furusato' && (
+        <FurusatoSection donations={furusatoDonations} onDonationsChange={setFurusatoDonations} />
+      )}
+
+      {subTab === 'form_b' && (
+        <TaxFormB
+          businessRevenue={data.revenue}
+          businessIncome={income}
+          blueDeduction={BLUE_DEDUCTION}
+          withholding={withholding}
+          furusatoDonations={furusatoDonations}
+        />
+      )}
+
+      {subTab === 'kessan' && (
+        <div className="mt-6 p-4 bg-gray-50 border border-gray-300 rounded text-sm text-gray-700">
+          <p className="font-bold mb-1">使い方:</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>金額をクリックするとクリップボードにコピーされます</li>
+            <li>「前年の決算書PDFを読み込む」で期首残高と元入金を自動入力できます（e-TaxのPDFに対応）</li>
+            <li>期首の金額は手動でも入力できます（前年の期末残高を転記）</li>
+            <li>「その他の預金」期末は自動計算: 期首 + 売上 - 経費 - 事業主貸 + 事業主借</li>
+            <li>各タブで源泉徴収票・ふるさと納税を入力すると「確定申告書B」タブで税額が自動計算されます</li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
