@@ -9,6 +9,10 @@ export interface SourceConfig {
     withdrawal: number;
     deposit: number;
   };
+  typeValues?: {
+    income: string;
+    expense: string;
+  };
   accountNumberExtraction?: boolean;
 }
 

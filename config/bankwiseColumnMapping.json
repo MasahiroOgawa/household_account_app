@@ -72,6 +72,26 @@
       "dateFormat": "YYYY/MM/DD"
     },
 
+    "paypal": {
+      "name": "PayPal",
+      "filename": ["Download.CSV", "Download*.csv"],
+      "columns": {
+        "date": 0,
+        "time": 1,
+        "description": 15,
+        "shopName": 3,
+        "amount": 7,
+        "typeColumn": 40
+      },
+      "typeValues": {
+        "income": "入金",
+        "expense": "出金"
+      },
+      "encoding": "utf-8",
+      "skipRows": 1,
+      "dateFormat": "YYYY/MM/DD"
+    },
+
     "yuucho": {
       "name": "ゆうちょ銀行",
       "columns": {
@@ -151,6 +171,10 @@
     "yuucho": {
       "headerPatterns": ["お客さま口座情報"],
       "fileNamePattern": "yuucho|yucho"
+    },
+    "paypal": {
+      "headerPatterns": ["残高への影響", "取引ID", "送信者メールアドレス"],
+      "fileNamePattern": "download\\.csv"
     },
     "transaction_result": {
       "headerPatterns": ["Date", "Time", "Amount", "Type", "Description", "Category", "Shop Name", "Source"],

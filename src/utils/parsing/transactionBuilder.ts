@@ -102,7 +102,13 @@ export const buildTransaction = (
     const amountStr = row[columns.amount];
     const parsedAmt = parseAmount(amountStr);
 
-    if (columns.type === 'expense') {
+    // Determine type from typeColumn + typeValues if configured
+    const typeColIdx = typeof columns.typeColumn === 'number' ? columns.typeColumn as number : -1;
+    const typeValues = sourceConfig.typeValues;
+    if (typeColIdx >= 0 && typeValues && typeColIdx < row.length) {
+      const typeStr = (row[typeColIdx] || '').toString().trim();
+      transactionType = typeStr === typeValues.income ? 'income' : 'expense';
+    } else if (columns.type === 'expense') {
       transactionType = 'expense';
     } else if (columns.type === 'income') {
       transactionType = 'income';
@@ -168,10 +174,16 @@ export const buildTransaction = (
     : detectCategory(shopName || description, transactionType);
   const sourceName = sourceConfig.name || sourceType;
 
+  // Extract time from dedicated column if available, otherwise default
+  const timeColIdx = typeof columns.time === 'number' ? columns.time as number : -1;
+  const timeValue = (timeColIdx >= 0 && timeColIdx < row.length && row[timeColIdx])
+    ? row[timeColIdx].toString().trim()
+    : '12:00:00';
+
   return {
     id: generateUniqueId(sourceType),
     date: format(parsedDate, 'yyyy-MM-dd'),
-    time: '12:00:00',
+    time: timeValue,
     amount,
     description: description || `${sourceName} Transaction`,
     category,
