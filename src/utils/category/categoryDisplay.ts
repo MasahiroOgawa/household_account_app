@@ -7,28 +7,55 @@ const displayNameToKey: Record<string, string> = Object.fromEntries(
 );
 
 /**
- * Normalize any category string to canonical snake_case internal key.
- * Handles display names ("Other Income"), mixed case, spaces, etc.
+ * Check if a category is a valid subcategory key (Japanese 勘定科目 or private-* prefixed).
+ * Plain English main categories (e.g. "education") are NOT valid subcategory keys.
+ */
+const isValidSubcategoryKey = (category: string): boolean => {
+  if (category.startsWith('private-')) return true;
+  const mapping = configLoader.getCategoryMapping();
+  const subcategories = mapping.subcategories;
+  if (!subcategories) return false;
+  const isSplit = 'income' in subcategories || 'expense' in subcategories;
+  if (isSplit) {
+    const split = subcategories as Record<string, Record<string, string>>;
+    return !!(split.income?.[category] || split.expense?.[category]);
+  }
+  return category in (subcategories as Record<string, string>);
+};
+
+/**
+ * Normalize any category string to canonical subcategory key.
+ * Plain English main categories are auto-prefixed with "private-".
  */
 export const normalizeCategory = (category: string): string => {
   if (!category) return category;
   const trimmed = category.trim();
-
-  // Already a known internal key
-  if (categoryDisplayInfo[trimmed]) return trimmed;
-  if (categoryDisplayInfo[trimmed.toLowerCase()]) return trimmed.toLowerCase();
-
-  // Match against display names (e.g. "Other Income" -> "other_income")
-  const reversed = displayNameToKey[trimmed.toLowerCase()];
-  if (reversed) return reversed;
 
   // Handle private-* prefix: normalize the base part, keep prefix
   if (trimmed.startsWith('private-')) {
     return `private-${normalizeCategory(trimmed.slice(8))}`;
   }
 
-  // Convert spaces to underscores and lowercase
-  return trimmed.toLowerCase().replace(/\s+/g, '_');
+  // Already a valid subcategory key (Japanese 勘定科目)
+  if (isValidSubcategoryKey(trimmed)) return trimmed;
+
+  // Resolve to a known internal key
+  let resolved = trimmed;
+  if (categoryDisplayInfo[trimmed]) {
+    resolved = trimmed;
+  } else if (categoryDisplayInfo[trimmed.toLowerCase()]) {
+    resolved = trimmed.toLowerCase();
+  } else {
+    const reversed = displayNameToKey[trimmed.toLowerCase()];
+    if (reversed) resolved = reversed;
+    else resolved = trimmed.toLowerCase().replace(/\s+/g, '_');
+  }
+
+  // If resolved is a plain English main category, prefix with private-
+  if (resolved && !isValidSubcategoryKey(resolved)) {
+    return `private-${resolved}`;
+  }
+  return resolved;
 };
 
 export const getCategoryDisplayName = (category: string): string => {

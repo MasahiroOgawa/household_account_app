@@ -32,4 +32,15 @@ export const resolveToEnglishCategory = (subcategory: string, type: 'income' | '
   return subcategory;
 };
 
-export const isBusinessCategory = (category: string): boolean => !category.startsWith('private-');
+export const isBusinessCategory = (category: string): boolean => {
+  if (category.startsWith('private-')) return false;
+  const mapping = configLoader.getCategoryMapping();
+  const subcategories = mapping.subcategories;
+  if (!subcategories) return false;
+  const isSplit = 'income' in subcategories || 'expense' in subcategories;
+  if (isSplit) {
+    const split = subcategories as Record<string, Record<string, string>>;
+    return !!(split.income?.[category] || split.expense?.[category]);
+  }
+  return category in (subcategories as Record<string, string>);
+};

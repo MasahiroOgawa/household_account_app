@@ -30,8 +30,8 @@ describe('detectCategory', () => {
     expect(detectCategory('ＡＭＡＺＯＮ．ＣＯ．ＪＰ', 'expense')).toBe('消耗品費');
   });
 
-  it('detects 旅費交通費 for travel-related merchants', () => {
-    expect(detectCategory('ＪＲ東海', 'expense')).toBe('旅費交通費');
+  it('detects private-transit for travel-related merchants', () => {
+    expect(detectCategory('ＪＲ東海', 'expense')).toBe('private-transit');
   });
 });
 
