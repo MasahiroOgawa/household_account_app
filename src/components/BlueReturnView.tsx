@@ -322,7 +322,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
       <div className="flex items-center justify-between mt-6 mb-2 border-b-2 border-black pb-1">
         <h3 className="text-lg font-bold">貸借対照表（12月31日現在）</h3>
         <div className="flex items-center gap-2">
-          <input type="file" accept=".pdf" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" />
+          <input type="file" accept=".pdf" ref={pdfInputRef} onChange={handlePdfUpload} style={{ display: 'none' }} />
           <button
             onClick={() => pdfInputRef.current?.click()}
             disabled={pdfStatus === 'loading'}
