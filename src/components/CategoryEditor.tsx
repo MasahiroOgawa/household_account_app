@@ -86,9 +86,20 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ transactions = [
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      entries = entries.filter(([merchant]) =>
-        merchant.toLowerCase().includes(q)
-      );
+      entries = entries.filter(([merchant, value]) => {
+        if (merchant.toLowerCase().includes(q)) return true;
+        const subs = typeof value === 'string'
+          ? [value]
+          : [value.income, value.expense];
+        return subs.some(s =>
+          s.toLowerCase().includes(q)
+          || getCategoryDisplayName(s).toLowerCase().includes(q)
+          || resolveCategory(s, 'income').toLowerCase().includes(q)
+          || resolveCategory(s, 'expense').toLowerCase().includes(q)
+          || getCategoryDisplayName(resolveCategory(s, 'expense')).toLowerCase().includes(q)
+          || getCategoryDisplayName(resolveCategory(s, 'income')).toLowerCase().includes(q)
+        );
+      });
     }
 
     return entries.sort(([a], [b]) => a.localeCompare(b));
@@ -179,7 +190,7 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ transactions = [
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search merchants..."
+            placeholder="Search merchants or subcategories..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 border-2 border-black rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"
