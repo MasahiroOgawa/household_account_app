@@ -33,6 +33,22 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   <h3 className="text-lg font-bold mt-6 mb-2 border-b-2 border-black pb-1">{children}</h3>
 );
 
+// 家事按分 targets and default ratio
+const KAJIANBUN_TARGETS = ['水道光熱費', '地代家賃', '修繕積立金'] as const;
+const DEFAULT_KAJIANBUN_PCT = 50;
+
+interface KajianbunState {
+  水道光熱費: number;
+  地代家賃: number;
+  修繕積立金: number;
+}
+
+const defaultKajianbun: KajianbunState = {
+  水道光熱費: DEFAULT_KAJIANBUN_PCT,
+  地代家賃: DEFAULT_KAJIANBUN_PCT,
+  修繕積立金: DEFAULT_KAJIANBUN_PCT,
+};
+
 // 貸借対照表 editable fields
 interface BalanceSheetState {
   cashStart: number;
@@ -58,18 +74,36 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   const years = useMemo(() => getAvailableYears(transactions), [transactions]);
   const [selectedYear, setSelectedYear] = useState<number>(years[0] || new Date().getFullYear());
   const [bs, setBs] = useState<BalanceSheetState>(defaultBalanceSheet);
+  const [kajianbun, setKajianbun] = useState<KajianbunState>(defaultKajianbun);
 
   const data: BlueReturnData = useMemo(
     () => calculateBlueReturn(transactions, selectedYear),
     [transactions, selectedYear]
   );
 
-  const sortedKamoku = useMemo(() => getSortedKamoku(data.kamokuTotals), [data]);
-  const profit = data.revenue - data.totalExpenses;
+  // 家事按分: split kamoku between business and private
+  const adjusted = useMemo(() => {
+    const kamoku = { ...data.kamokuTotals };
+    let privateTotal = 0;
+    for (const name of KAJIANBUN_TARGETS) {
+      const full = kamoku[name] ?? 0;
+      if (full === 0) continue;
+      const bizPct = kajianbun[name] / 100;
+      const bizAmount = Math.round(full * bizPct);
+      privateTotal += full - bizAmount;
+      kamoku[name] = bizAmount;
+    }
+    const totalExpenses = Object.values(kamoku).reduce((s, v) => s + v, 0);
+    const jigyounushiKashi = data.jigyounushiKashi + privateTotal;
+    return { kamoku, totalExpenses, jigyounushiKashi };
+  }, [data, kajianbun]);
+
+  const sortedKamoku = useMemo(() => getSortedKamoku(adjusted.kamoku), [adjusted]);
+  const profit = data.revenue - adjusted.totalExpenses;
   const income = Math.max(0, profit - BLUE_DEDUCTION);
 
   // 貸借対照表 期末計算
-  const depositEnd = bs.depositStart + data.revenue - data.totalExpenses - data.jigyounushiKashi + data.jigyounushiKari;
+  const depositEnd = bs.depositStart + data.revenue - adjusted.totalExpenses - adjusted.jigyounushiKashi + data.jigyounushiKari;
 
   const updateBs = (field: keyof BalanceSheetState, value: string) => {
     setBs(prev => ({ ...prev, [field]: Number(value) || 0 }));
@@ -127,7 +161,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
 
           <tr className="bg-gray-50 font-bold">
             <td className="border border-gray-300 px-3 py-1">経費合計</td>
-            <CopyCell value={data.totalExpenses} className="border border-gray-300 font-bold" />
+            <CopyCell value={adjusted.totalExpenses} className="border border-gray-300 font-bold" />
           </tr>
           <tr className="font-bold">
             <td className="border border-gray-300 px-3 py-1">差引金額（売上 - 経費）</td>
@@ -141,6 +175,47 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
             <td className="border border-gray-300 px-3 py-2">所得金額</td>
             <CopyCell value={income} className="border border-gray-300 font-bold" />
           </tr>
+        </tbody>
+      </table>
+
+      {/* 家事按分 */}
+      <SectionTitle>家事按分</SectionTitle>
+      <p className="text-sm text-gray-600 mb-2">事業使用割合（%）を入力してください。残りは事業主貸に振り替えます。</p>
+      <table className="w-full border-collapse border border-gray-300 text-sm mb-4">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border border-gray-300 px-3 py-1 text-left">勘定科目</th>
+            <th className="border border-gray-300 px-3 py-1 text-right">按分前</th>
+            <th className="border border-gray-300 px-3 py-1 text-center w-28">事業割合 (%)</th>
+            <th className="border border-gray-300 px-3 py-1 text-right">経費算入額</th>
+            <th className="border border-gray-300 px-3 py-1 text-right">事業主貸</th>
+          </tr>
+        </thead>
+        <tbody>
+          {KAJIANBUN_TARGETS.map(name => {
+            const full = data.kamokuTotals[name] ?? 0;
+            const pct = kajianbun[name];
+            const bizAmount = Math.round(full * pct / 100);
+            const privateAmount = full - bizAmount;
+            return (
+              <tr key={name}>
+                <td className="border border-gray-300 px-3 py-1">{name}</td>
+                <td className="border border-gray-300 px-3 py-1 text-right">{fmt(full)}</td>
+                <td className="border border-gray-300 px-1 py-1">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={pct}
+                    onChange={e => setKajianbun(prev => ({ ...prev, [name]: Math.min(100, Math.max(0, Number(e.target.value) || 0)) }))}
+                    className="w-full text-center border border-gray-300 rounded px-2 py-0.5"
+                  />
+                </td>
+                <CopyCell value={bizAmount} className="border border-gray-300" />
+                <td className="border border-gray-300 px-3 py-1 text-right text-gray-500">{fmt(privateAmount)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
@@ -165,7 +240,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
           <tr className="bg-gray-50 font-bold">
             <td className="border border-gray-300 px-3 py-1">合計</td>
             <CopyCell value={data.revenue} className="border border-gray-300 font-bold" />
-            <CopyCell value={data.totalExpenses} className="border border-gray-300 font-bold" />
+            <CopyCell value={adjusted.totalExpenses} className="border border-gray-300 font-bold" />
           </tr>
         </tbody>
       </table>
@@ -238,7 +313,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               <tr>
                 <td className="border border-gray-300 px-3 py-1">事業主貸</td>
                 <td className="border border-gray-300 px-3 py-1 text-right text-gray-400">-</td>
-                <CopyCell value={data.jigyounushiKashi} className="border border-gray-300" />
+                <CopyCell value={adjusted.jigyounushiKashi} className="border border-gray-300" />
               </tr>
               <tr>
                 <td className="border border-gray-300 px-3 py-1">事業主借</td>
