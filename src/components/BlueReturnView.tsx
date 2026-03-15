@@ -35,8 +35,6 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 // 家事按分 targets and default ratio
 const KAJIANBUN_TARGETS = ['水道光熱費', '通信費', '地代家賃', '修繕積立金'] as const;
-const DEFAULT_KAJIANBUN_PCT = 50;
-
 interface KajianbunState {
   水道光熱費: number;
   通信費: number;
@@ -45,10 +43,10 @@ interface KajianbunState {
 }
 
 const defaultKajianbun: KajianbunState = {
-  水道光熱費: DEFAULT_KAJIANBUN_PCT,
-  通信費: DEFAULT_KAJIANBUN_PCT,
-  地代家賃: DEFAULT_KAJIANBUN_PCT,
-  修繕積立金: DEFAULT_KAJIANBUN_PCT,
+  水道光熱費: 36,
+  通信費: 71,
+  地代家賃: 71,
+  修繕積立金: 71,
 };
 
 // 貸借対照表 editable fields
