@@ -36,13 +36,19 @@ const parseAmount = (s: string): number => {
 };
 
 // Merge adjacent single-char items into strings by Y-row and X-proximity
-const mergeTextItems = (items: TextItem[], yTolerance = 3, xGap = 12): TextItem[] => {
+const mergeTextItems = (items: TextItem[], yTolerance = 3, xGap = 15): TextItem[] => {
+  // Sort by Y descending, then X ascending — so we merge left-to-right within a row
   const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
   const merged: TextItem[] = [];
   let current: TextItem | null = null;
 
   for (const item of sorted) {
-    if (current && Math.abs(item.y - current.y) <= yTolerance && item.x - (current.x + current.str.length * 6) < xGap) {
+    if (
+      current &&
+      Math.abs(item.y - current.y) <= yTolerance &&
+      item.x > current.x && // must be to the right
+      item.x - (current.x + current.str.length * 7) < xGap
+    ) {
       current = { str: current.str + item.str, x: current.x, y: current.y };
     } else {
       if (current) merged.push(current);
@@ -141,8 +147,10 @@ const parseRakutenFurusatoPdf = async (doc: any): Promise<FurusatoDonation[]> =>
   );
 
   // Find municipality items: merged strings containing prefecture/city suffixes
+  // Real municipality names are short (e.g. "熊本県⾼森町", max ~12 chars)
   const municItems = allMergedItems.filter(i =>
     i.x >= 70 && i.x <= 160 &&
+    i.str.length <= 15 &&
     /[都道府県市区町村郡]/.test(i.str) &&
     !i.str.includes('注') && !i.str.includes('番')
   );
