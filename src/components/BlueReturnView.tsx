@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Transaction } from '../types/Transaction';
-import { calculateBlueReturn, getSortedKamoku, getAvailableYears, getAvailableSources, BlueReturnData } from '../utils/blueReturnCalculator';
+import { calculateBlueReturn, getSortedKamoku, getAvailableYears, getAvailableSources, calculateDepositStart, BlueReturnData } from '../utils/blueReturnCalculator';
 import { parsePreviousYearPdf } from '../utils/blueReturnPdfParser';
 import { WithholdingTaxData } from '../utils/withholdingTaxPdfParser';
 import { FurusatoDonation } from '../utils/furusatoTaxPdfParser';
@@ -125,6 +125,16 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   useEffect(() => {
     saveTaxFilingState({ withholding, furusatoDonations, businessSources });
   }, [withholding, furusatoDonations, businessSources]);
+
+  // Auto-calculate deposit start from business bank balances
+  useEffect(() => {
+    if (businessSources.length > 0) {
+      const autoDeposit = calculateDepositStart(transactions, selectedYear, businessSources);
+      if (autoDeposit > 0) {
+        setBs(prev => ({ ...prev, depositStart: autoDeposit }));
+      }
+    }
+  }, [businessSources, selectedYear, transactions]);
 
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');

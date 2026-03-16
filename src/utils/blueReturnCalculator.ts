@@ -115,3 +115,41 @@ export const getAvailableSources = (transactions: Transaction[]): string[] => {
   const sources = new Set(transactions.map(t => t.source));
   return [...sources].sort();
 };
+
+// Balance column index per source type (from bankwiseColumnMapping.json)
+const BALANCE_COLUMNS: Record<string, number> = {
+  '三菱UFJ銀行': 5,
+  'JRE銀行': 2,
+  '三井住友銀行': 4,
+};
+
+// Calculate the Jan 1 deposit balance for selected business banks
+// by finding the earliest transaction of the year and reading the post-transaction balance,
+// then reversing the transaction to get the pre-transaction (Jan 1) balance.
+export const calculateDepositStart = (transactions: Transaction[], year: number, businessSources: string[]): number => {
+  let total = 0;
+  for (const source of businessSources) {
+    const balCol = BALANCE_COLUMNS[source];
+    if (balCol === undefined) continue; // no balance column for this source
+
+    // Find the earliest transaction of the year for this source
+    const sourceTxns = transactions
+      .filter(t => t.source === source && t.date.startsWith(String(year)))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+
+    if (sourceTxns.length === 0) continue;
+
+    const first = sourceTxns[0];
+    const rawRow = first.originalData?.rawRow;
+    if (!rawRow || balCol >= rawRow.length) continue;
+
+    const balStr = String(rawRow[balCol] || '0').replace(/[,\s]/g, '');
+    const postBalance = parseInt(balStr, 10) || 0;
+
+    // Reverse the first transaction to get pre-transaction balance
+    const amt = Math.abs(first.amount);
+    const preBalance = first.type === 'income' ? postBalance - amt : postBalance + amt;
+    total += preBalance;
+  }
+  return total;
+};
