@@ -99,7 +99,8 @@
         "description": 6,
         "shopName": 7,
         "withdrawal": 5,
-        "deposit": 3
+        "deposit": 3,
+        "balance": 8
       },
       "encoding": "shift-jis",
       "skipRows": 8,

@@ -116,20 +116,27 @@ export const getAvailableSources = (transactions: Transaction[]): string[] => {
   return [...sources].sort();
 };
 
-// Balance column index per source type (from bankwiseColumnMapping.json)
-const BALANCE_COLUMNS: Record<string, number> = {
-  '三菱UFJ銀行': 5,
-  'JRE銀行': 2,
-  '三井住友銀行': 4,
+// Build a map of source display name → balance column index from bankwiseColumnMapping.json
+const getBalanceColumns = (): Record<string, number> => {
+  const { sources } = configLoader.getColumnMapping();
+  const result: Record<string, number> = {};
+  for (const cfg of Object.values(sources)) {
+    const balCol = cfg.columns.balance;
+    if (cfg.name && typeof balCol === 'number') {
+      result[cfg.name] = balCol;
+    }
+  }
+  return result;
 };
 
 // Calculate the Jan 1 deposit balance for selected business banks
 // by finding the earliest transaction of the year and reading the post-transaction balance,
 // then reversing the transaction to get the pre-transaction (Jan 1) balance.
 export const calculateDepositStart = (transactions: Transaction[], year: number, businessSources: string[]): number => {
+  const balanceColumns = getBalanceColumns();
   let total = 0;
   for (const source of businessSources) {
-    const balCol = BALANCE_COLUMNS[source];
+    const balCol = balanceColumns[source];
     if (balCol === undefined) continue; // no balance column for this source
 
     // Find the earliest transaction of the year for this source
@@ -143,7 +150,7 @@ export const calculateDepositStart = (transactions: Transaction[], year: number,
     const rawRow = first.originalData?.rawRow;
     if (!rawRow || balCol >= rawRow.length) continue;
 
-    const balStr = String(rawRow[balCol] || '0').replace(/[,\s]/g, '');
+    const balStr = String(rawRow[balCol] || '0').replace(/[,\s"]/g, '');
     const postBalance = parseInt(balStr, 10) || 0;
 
     // Reverse the first transaction to get pre-transaction balance
