@@ -213,7 +213,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
         inventoryEnd: p.inventoryEnd || prev.inventory,
         buildingStart: prev.building,
         buildingEquipmentStart: prev.buildingEquipment,
-        toolsStart: prev.tools,
+        toolsStart: prev.tools <= 1 ? 0 : prev.tools,
         accountsPayableStart: prev.accountsPayable,
         accountsPayableEnd: p.accountsPayableEnd || prev.accountsPayable,
         unpaidStart: prev.unpaid,
