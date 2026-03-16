@@ -304,11 +304,12 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   // 売掛金期末 = 12月の売上（翌年1月入金）
   const accountsReceivableEnd = data.monthlyRevenue[11] || 0;
 
-  // 貸借対照表 合計計算
+  // 貸借対照表 合計計算 (e-Tax layout: 事業主貸 is in 資産の部)
   const assetStartTotal = bs.cashStart + effectiveDepositStart + bs.accountsReceivableStart
     + bs.inventoryStart + bs.buildingStart + bs.buildingEquipmentStart + bs.toolsStart;
   const assetEndTotal = bs.cashStart + depositEnd + accountsReceivableEnd
-    + (bs.inventoryEnd || bs.inventoryStart) + buildingEnd + buildingEquipmentEnd + toolsEnd;
+    + (bs.inventoryEnd || bs.inventoryStart) + buildingEnd + buildingEquipmentEnd + toolsEnd
+    + adjusted.jigyounushiKashi; // 事業主貸 included in 資産の部
 
   const liabilityStart = bs.accountsPayableStart + bs.unpaidStart;
   const liabilityEnd = (bs.accountsPayableEnd || bs.accountsPayableStart) + (bs.unpaidEnd || bs.unpaidStart);
@@ -319,11 +320,10 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   // 青色申告特別控除前の所得金額
   const shotokuBeforeDeduction = profit;
 
-  // 事業主借 = balancing item (same as e-Tax auto-calculation)
-  // 資産合計期末 = 負債期末 + 元入金 + 事業主借 - 事業主貸 + 所得
-  // → 事業主借 = 資産合計期末 - 負債期末 - 元入金 + 事業主貸 - 所得
-  const jigyounushiKari = assetEndTotal - liabilityEnd - motoirekinStart
-    + adjusted.jigyounushiKashi - shotokuBeforeDeduction;
+  // 事業主借 = balancing item (same as e-Tax)
+  // 資産の部(含事業主貸) = 負債 + 事業主借 + 元入金 + 所得
+  // → 事業主借 = 資産合計期末 - 負債期末 - 元入金 - 所得
+  const jigyounushiKari = assetEndTotal - liabilityEnd - motoirekinStart - shotokuBeforeDeduction;
 
   type NumericBsField = { [K in keyof BalanceSheetState]: BalanceSheetState[K] extends number ? K : never }[keyof BalanceSheetState];
 
@@ -636,6 +636,11 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               <BsRow label="建物" startField="buildingStart" endValue={buildingEnd} endEditable={false} />
               <BsRow label="建物附属設備" startField="buildingEquipmentStart" endValue={buildingEquipmentEnd} endEditable={false} />
               <BsRow label="工具器具備品" startField="toolsStart" endValue={toolsEnd} endEditable={false} />
+              <tr>
+                <td className="border border-gray-300 px-3 py-1">事業主貸</td>
+                <td className="border border-gray-300 px-3 py-1 text-right text-gray-400">-</td>
+                <CopyCell value={adjusted.jigyounushiKashi} className="border border-gray-300" />
+              </tr>
               <tr className="bg-gray-100 font-bold">
                 <td className="border border-gray-300 px-3 py-1">合計</td>
                 <CopyCell value={assetStartTotal} className="border border-gray-300" />
@@ -659,11 +664,6 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
             <tbody>
               <BsRow label="買掛金" startField="accountsPayableStart" endField="accountsPayableEnd" />
               <BsRow label="未払金" startField="unpaidStart" endField="unpaidEnd" />
-              <tr>
-                <td className="border border-gray-300 px-3 py-1">事業主貸</td>
-                <td className="border border-gray-300 px-3 py-1 text-right text-gray-400">-</td>
-                <CopyCell value={adjusted.jigyounushiKashi} className="border border-gray-300" />
-              </tr>
               <tr>
                 <td className="border border-gray-300 px-3 py-1">事業主借</td>
                 <td className="border border-gray-300 px-3 py-1 text-right text-gray-400">-</td>
