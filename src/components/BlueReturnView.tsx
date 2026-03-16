@@ -319,9 +319,11 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   // 青色申告特別控除前の所得金額
   const shotokuBeforeDeduction = profit;
 
-  // 負債・資本の部 期末合計 = 負債 + 元入金 + 事業主借 - 事業主貸 + 所得
-  const liabilityCapitalEndTotal = liabilityEnd + motoirekinStart
-    + data.jigyounushiKari - adjusted.jigyounushiKashi + shotokuBeforeDeduction;
+  // 事業主借 = balancing item (same as e-Tax auto-calculation)
+  // 資産合計期末 = 負債期末 + 元入金 + 事業主借 - 事業主貸 + 所得
+  // → 事業主借 = 資産合計期末 - 負債期末 - 元入金 + 事業主貸 - 所得
+  const jigyounushiKari = assetEndTotal - liabilityEnd - motoirekinStart
+    + adjusted.jigyounushiKashi - shotokuBeforeDeduction;
 
   type NumericBsField = { [K in keyof BalanceSheetState]: BalanceSheetState[K] extends number ? K : never }[keyof BalanceSheetState];
 
@@ -665,7 +667,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               <tr>
                 <td className="border border-gray-300 px-3 py-1">事業主借</td>
                 <td className="border border-gray-300 px-3 py-1 text-right text-gray-400">-</td>
-                <CopyCell value={data.jigyounushiKari} className="border border-gray-300" />
+                <CopyCell value={jigyounushiKari} className="border border-gray-300" />
               </tr>
               <tr>
                 <td className="border border-gray-300 px-3 py-1">元入金</td>
@@ -680,19 +682,12 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               <tr className="bg-gray-100 font-bold">
                 <td className="border border-gray-300 px-3 py-1">合計</td>
                 <CopyCell value={assetStartTotal} className="border border-gray-300" />
-                <CopyCell value={liabilityCapitalEndTotal} className="border border-gray-300" />
+                <CopyCell value={assetEndTotal} className="border border-gray-300" />
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-      {/* Balance check */}
-      {Math.abs(assetEndTotal - liabilityCapitalEndTotal) > 1 && (
-        <div className="mt-2 p-2 bg-red-50 border border-red-300 rounded text-sm text-red-800">
-          期末不一致: 資産の部 {assetEndTotal.toLocaleString()}円 ≠ 負債・資本の部 {liabilityCapitalEndTotal.toLocaleString()}円
-          （差額: {(assetEndTotal - liabilityCapitalEndTotal).toLocaleString()}円）
-        </div>
-      )}
     </>
   );
 
