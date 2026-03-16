@@ -91,6 +91,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               </p>
             </div>
             <FileUpload onFileSelect={handleFileSelect} isLoading={isLoading} error={error} />
+            <div className="mt-8 pt-6 border-t border-gray-300">
+              <button
+                onClick={() => {
+                  if (!window.confirm('すべてのキャッシュデータを削除しますか？\n（トランザクション、確定申告データ、カテゴリ設定など）')) return;
+                  localStorage.clear();
+                  setTransactions([]);
+                  window.location.reload();
+                }}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                すべてのキャッシュをクリア
+              </button>
+              <p className="text-xs text-gray-500 mt-1">源泉徴収票・ふるさと納税・カテゴリ設定などの保存データをすべて削除します</p>
+            </div>
           </div>
         );
       case 'status':
