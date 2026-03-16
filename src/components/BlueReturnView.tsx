@@ -42,12 +42,13 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 );
 
 // 家事按分 targets and default ratio
-const KAJIANBUN_TARGETS = ['水道光熱費', '通信費', '地代家賃', '修繕積立金'] as const;
+const KAJIANBUN_TARGETS = ['水道光熱費', '通信費', '地代家賃', '修繕積立金', '減価償却費'] as const;
 interface KajianbunState {
   水道光熱費: number;
   通信費: number;
   地代家賃: number;
   修繕積立金: number;
+  減価償却費: number;
 }
 
 const defaultKajianbun: KajianbunState = {
@@ -55,6 +56,7 @@ const defaultKajianbun: KajianbunState = {
   通信費: 71,
   地代家賃: 71,
   修繕積立金: 71,
+  減価償却費: 29,
 };
 
 // 定額法 償却率表 (耐用年数 → 償却率)
@@ -541,8 +543,14 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
                     className="w-32 text-right border border-gray-300 rounded px-1 py-0.5"
                   />
                 </td>
-                <td className="border border-gray-300 px-2 py-1 text-right">
-                  {bs[field].usefulLife > 0 ? `${bs[field].usefulLife}年` : '-'}
+                <td className="border border-gray-300 px-1 py-1">
+                  <input
+                    type="number"
+                    value={bs[field].usefulLife || ''}
+                    onChange={e => setBs(p => ({ ...p, [field]: { ...p[field], usefulLife: Number(e.target.value) || 0 } }))}
+                    className="w-16 text-right border border-gray-300 rounded px-1 py-0.5"
+                    placeholder="年"
+                  />
                 </td>
                 <td className="border border-gray-300 px-2 py-1 text-right">
                   {DEPRECIATION_RATES[bs[field].usefulLife] ?? '-'}
