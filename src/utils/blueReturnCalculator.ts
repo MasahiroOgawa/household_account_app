@@ -63,16 +63,23 @@ export const calculateBlueReturn = (transactions: Transaction[], year: number, b
   for (const t of yearTxns) {
     const month = new Date(t.date).getMonth(); // 0-based
     const amt = Math.abs(t.amount);
+    const isFromBizBank = !bizSourceSet || bizSourceSet.has(t.source);
 
     if (t.type === 'income' && keys.income.has(t.category)) {
       // Business income: counted regardless of source bank
       revenue += amt;
       monthlyRevenue[month] += amt;
+      // If received in a non-business bank, offset with 事業主貸
+      // (income earned by business but money went to private account)
+      if (!isFromBizBank) jigyounushiKashi += amt;
     } else if (t.type === 'expense' && keys.expense.has(t.category)) {
       // Business expense: counted regardless of source bank
       kamokuTotals[t.category] = (kamokuTotals[t.category] || 0) + amt;
       monthlyExpenses[month] += amt;
-    } else if (bizSourceSet && !bizSourceSet.has(t.source)) {
+      // If paid from a non-business bank, offset with 事業主借
+      // (expense paid by business but funded from private account)
+      if (!isFromBizBank) jigyounushiKari += amt;
+    } else if (!isFromBizBank) {
       // Private transaction from a non-business bank → ignore entirely
       continue;
     } else if (t.type === 'expense') {
