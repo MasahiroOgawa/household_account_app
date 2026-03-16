@@ -294,7 +294,16 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   }, [data, kajianbun, depreciationExpense, totalDepreciation]);
 
   const sortedKamoku = useMemo(() => getSortedKamoku(adjusted.kamoku), [adjusted]);
-  const profit = data.revenue - adjusted.totalExpenses;
+
+  // 売上原価 = 期首商品棚卸高 + 仕入金額 - 期末商品棚卸高 (same as e-Tax)
+  const purchaseAmount = adjusted.kamoku['売上原価'] || 0; // 仕入金額 from transactions
+  const inventoryStart = bs.inventoryStart;
+  const inventoryEnd = bs.inventoryEnd || bs.inventoryStart;
+  const cogs = inventoryStart + purchaseAmount - inventoryEnd; // 売上原価の合計
+  const expensesExCogs = adjusted.totalExpenses - purchaseAmount; // 経費（仕入を除く）
+
+  // 所得 = 売上 - 売上原価 - 経費 (e-Tax formula)
+  const profit = data.revenue - cogs - expensesExCogs;
   const income = Math.max(0, profit - BLUE_DEDUCTION);
 
   // 貸借対照表 期末計算: read actual bank balance from last transaction of the year
@@ -426,11 +435,34 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
         </thead>
         <tbody>
           <tr className="bg-blue-50 font-bold">
-            <td className="border border-gray-300 px-3 py-1">売上（収入）金額</td>
+            <td className="border border-gray-300 px-3 py-1">売上（収入）金額 ①</td>
             <CopyCell value={data.revenue} className="border border-gray-300 font-bold" />
           </tr>
 
-          {sortedKamoku.map(([name, amount]) => (
+          {/* 売上原価 */}
+          <tr className="bg-gray-50">
+            <td className="border border-gray-300 px-3 py-1 pl-6">期首商品棚卸高</td>
+            <CopyCell value={inventoryStart} className="border border-gray-300" />
+          </tr>
+          <tr>
+            <td className="border border-gray-300 px-3 py-1 pl-6">仕入金額</td>
+            <CopyCell value={purchaseAmount} className="border border-gray-300" />
+          </tr>
+          <tr className="bg-gray-50">
+            <td className="border border-gray-300 px-3 py-1 pl-6">期末商品棚卸高</td>
+            <CopyCell value={inventoryEnd} className="border border-gray-300" />
+          </tr>
+          <tr className="font-bold">
+            <td className="border border-gray-300 px-3 py-1">売上原価 ②</td>
+            <CopyCell value={cogs} className="border border-gray-300 font-bold" />
+          </tr>
+          <tr className="bg-blue-50 font-bold">
+            <td className="border border-gray-300 px-3 py-1">差引金額（① - ②）</td>
+            <CopyCell value={data.revenue - cogs} className="border border-gray-300 font-bold" />
+          </tr>
+
+          {/* 経費 */}
+          {sortedKamoku.filter(([name]) => name !== '売上原価').map(([name, amount]) => (
             <tr key={name}>
               <td className="border border-gray-300 px-3 py-1 pl-6">{name}</td>
               <CopyCell value={amount} className="border border-gray-300" />
@@ -438,11 +470,11 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
           ))}
 
           <tr className="bg-gray-50 font-bold">
-            <td className="border border-gray-300 px-3 py-1">経費合計</td>
-            <CopyCell value={adjusted.totalExpenses} className="border border-gray-300 font-bold" />
+            <td className="border border-gray-300 px-3 py-1">経費合計 ③</td>
+            <CopyCell value={expensesExCogs} className="border border-gray-300 font-bold" />
           </tr>
           <tr className="font-bold">
-            <td className="border border-gray-300 px-3 py-1">差引金額（売上 - 経費）</td>
+            <td className="border border-gray-300 px-3 py-1">青色申告特別控除前の所得（① - ② - ③）</td>
             <CopyCell value={profit} className="border border-gray-300 font-bold" />
           </tr>
           <tr>
