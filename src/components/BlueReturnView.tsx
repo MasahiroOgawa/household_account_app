@@ -70,6 +70,7 @@ interface BalanceSheetState {
   buildingEquipmentEnd: number;
   toolsStart: number;
   toolsEnd: number;
+  depreciation: number;
   accountsPayableStart: number;
   accountsPayableEnd: number;
   unpaidStart: number;
@@ -90,6 +91,7 @@ const defaultBalanceSheet: BalanceSheetState = {
   buildingEquipmentEnd: 0,
   toolsStart: 0,
   toolsEnd: 0,
+  depreciation: 0,
   accountsPayableStart: 0,
   accountsPayableEnd: 0,
   unpaidStart: 0,
@@ -180,6 +182,10 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   // 家事按分: split kamoku between business and private
   const adjusted = useMemo(() => {
     const kamoku = { ...data.kamokuTotals };
+    // Add manual depreciation if no transaction-based depreciation exists
+    if (bs.depreciation > 0 && !kamoku['減価償却費']) {
+      kamoku['減価償却費'] = bs.depreciation;
+    }
     let privateTotal = 0;
     for (const name of KAJIANBUN_TARGETS) {
       const full = kamoku[name] ?? 0;
@@ -192,7 +198,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
     const totalExpenses = Object.values(kamoku).reduce((s, v) => s + v, 0);
     const jigyounushiKashi = data.jigyounushiKashi + privateTotal;
     return { kamoku, totalExpenses, jigyounushiKashi };
-  }, [data, kajianbun]);
+  }, [data, kajianbun, bs.depreciation]);
 
   const sortedKamoku = useMemo(() => getSortedKamoku(adjusted.kamoku), [adjusted]);
   const profit = data.revenue - adjusted.totalExpenses;
@@ -208,7 +214,8 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   const depositEnd = autoDepositEnd ?? (effectiveDepositStart + data.revenue - adjusted.totalExpenses - adjusted.jigyounushiKashi + data.jigyounushiKari);
 
   // 減価償却費を建物・建物附属設備・工具器具備品に按分
-  const depreciation = adjusted.kamoku['減価償却費'] || 0;
+  // Use manual input if set, otherwise fall back to kamoku value from transactions
+  const depreciation = bs.depreciation || adjusted.kamoku['減価償却費'] || 0;
   const depreciableAssets = useMemo(() => {
     const building = bs.buildingStart;
     const equipment = bs.buildingEquipmentStart;
@@ -440,6 +447,17 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
           {pdfError}
         </div>
       )}
+      <div className="mb-3 flex items-center gap-2 text-sm">
+        <label className="font-medium">減価償却費:</label>
+        <input
+          type="number"
+          value={bs.depreciation || ''}
+          onChange={e => updateBs('depreciation', e.target.value)}
+          className="w-40 text-right border border-gray-300 rounded px-2 py-0.5"
+          placeholder="手入力"
+        />
+        <span className="text-gray-500 text-xs">（建物・設備・工具に按分して期末を計算）</span>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         {/* 資産の部 */}
         <div>
