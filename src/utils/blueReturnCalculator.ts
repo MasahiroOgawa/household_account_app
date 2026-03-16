@@ -129,6 +129,31 @@ const getBalanceColumns = (): Record<string, number> => {
   return result;
 };
 
+// Calculate the Dec 31 deposit balance for selected business banks
+// by finding the latest transaction of the year and reading the post-transaction balance.
+export const calculateDepositEnd = (transactions: Transaction[], year: number, businessSources: string[]): number => {
+  const balanceColumns = getBalanceColumns();
+  let total = 0;
+  for (const source of businessSources) {
+    const balCol = balanceColumns[source];
+    if (balCol === undefined) continue;
+
+    const sourceTxns = transactions
+      .filter(t => t.source === source && t.date.startsWith(String(year)))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+
+    if (sourceTxns.length === 0) continue;
+
+    const last = sourceTxns[sourceTxns.length - 1];
+    const rawRow = last.originalData?.rawRow;
+    if (!rawRow || balCol >= rawRow.length) continue;
+
+    const balStr = String(rawRow[balCol] || '0').replace(/[,\s"]/g, '');
+    total += parseInt(balStr, 10) || 0;
+  }
+  return total;
+};
+
 // Calculate the Jan 1 deposit balance for selected business banks
 // by finding the earliest transaction of the year and reading the post-transaction balance,
 // then reversing the transaction to get the pre-transaction (Jan 1) balance.

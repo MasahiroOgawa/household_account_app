@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Transaction } from '../types/Transaction';
-import { calculateBlueReturn, getSortedKamoku, getAvailableYears, getAvailableSources, calculateDepositStart, BlueReturnData } from '../utils/blueReturnCalculator';
+import { calculateBlueReturn, getSortedKamoku, getAvailableYears, getAvailableSources, calculateDepositStart, calculateDepositEnd, BlueReturnData } from '../utils/blueReturnCalculator';
 import { parsePreviousYearPdf } from '../utils/blueReturnPdfParser';
 import { WithholdingTaxData } from '../utils/withholdingTaxPdfParser';
 import { FurusatoDonation } from '../utils/furusatoTaxPdfParser';
@@ -195,8 +195,14 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   const profit = data.revenue - adjusted.totalExpenses;
   const income = Math.max(0, profit - BLUE_DEDUCTION);
 
-  // 貸借対照表 期末計算
-  const depositEnd = effectiveDepositStart + data.revenue - adjusted.totalExpenses - adjusted.jigyounushiKashi + data.jigyounushiKari;
+  // 貸借対照表 期末計算: read actual bank balance from last transaction of the year
+  const autoDepositEnd = useMemo(() => {
+    if (businessSources.length === 0) return null;
+    const val = calculateDepositEnd(transactions, selectedYear, businessSources);
+    return val > 0 ? val : null;
+  }, [businessSources, selectedYear, transactions]);
+
+  const depositEnd = autoDepositEnd ?? (effectiveDepositStart + data.revenue - adjusted.totalExpenses - adjusted.jigyounushiKashi + data.jigyounushiKari);
 
   const updateBs = (field: keyof BalanceSheetState, value: string) => {
     setBs(prev => ({ ...prev, [field]: Number(value) || 0 }));
