@@ -35,28 +35,31 @@ const parseAmount = (s: string): number => {
   return isNaN(n) ? 0 : n;
 };
 
-// Merge adjacent single-char items into strings by Y-row and X-proximity
-const mergeTextItems = (items: TextItem[], yTolerance = 3, xGap = 15): TextItem[] => {
-  // Sort by Y descending, then X ascending — so we merge left-to-right within a row
-  const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
-  const merged: TextItem[] = [];
-  let current: TextItem | null = null;
+// Group items into rows by Y coordinate, then join chars within each row by X order
+// Returns array of { y, text: joined string of items in xMin..xMax }
+const collectRowTexts = (items: TextItem[], xMin: number, xMax: number, yTolerance = 4): { y: number; text: string }[] => {
+  const filtered = items.filter(i => i.x >= xMin && i.x <= xMax);
+  if (filtered.length === 0) return [];
 
-  for (const item of sorted) {
-    if (
-      current &&
-      Math.abs(item.y - current.y) <= yTolerance &&
-      item.x > current.x && // must be to the right
-      item.x - (current.x + current.str.length * 7) < xGap
-    ) {
-      current = { str: current.str + item.str, x: current.x, y: current.y };
+  // Group by Y
+  filtered.sort((a, b) => b.y - a.y || a.x - b.x);
+  const rows: { y: number; items: TextItem[] }[] = [];
+  let curRow: { y: number; items: TextItem[] } | null = null;
+
+  for (const item of filtered) {
+    if (curRow && Math.abs(item.y - curRow.y) <= yTolerance) {
+      curRow.items.push(item);
     } else {
-      if (current) merged.push(current);
-      current = { ...item };
+      if (curRow) rows.push(curRow);
+      curRow = { y: item.y, items: [item] };
     }
   }
-  if (current) merged.push(current);
-  return merged;
+  if (curRow) rows.push(curRow);
+
+  return rows.map(r => ({
+    y: r.y,
+    text: r.items.sort((a, b) => a.x - b.x).map(i => i.str).join(''),
+  }));
 };
 
 // ─── ふるさとチョイス ───
@@ -66,8 +69,6 @@ const mergeTextItems = (items: TextItem[], yTolerance = 3, xGap = 15): TextItem[
 //   自治体名:  x~204, chars that form municipality name (individual chars)
 //   寄付金額:  x~301, amount like "12,000" + "円"
 //   決済種別:  x~361
-//
-// Data rows have dates at x~61 y descending, municipality at x~204 same y, amount at x~301 same y
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parseFurusatoChoicePdf = async (doc: any): Promise<FurusatoDonation[]> => {
   const donations: FurusatoDonation[] = [];
@@ -109,60 +110,47 @@ const parseFurusatoChoicePdf = async (doc: any): Promise<FurusatoDonation[]> => 
 
 // ─── 楽天ふるさと納税 ───
 // Web page PDF with char-by-char text. Structure per order block:
-//   Municipality line: chars at x~89, e.g. "熊本県⾼森町" (individual chars at y~575)
-//   注文日 line:       "注⽂⽇：2025/09/28(⽇)" at y~553, date at x~115
-//   Product lines:     product descriptions
-//   Amount line:       "144,000" + "円" at x~141
+//   Municipality line: chars at x~89-150, e.g. "熊本県⾼森町"
+//   注文日 line:       date at x~115, "2025/09/28("
+//   Amount line:       "144,000" at x~141 + "円"
 //
-// Orders can span pages, so we collect all items across pages with global Y offsets.
+// Orders can span pages, so we collect items across all pages with global Y offsets.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parseRakutenFurusatoPdf = async (doc: any): Promise<FurusatoDonation[]> => {
-  const PAGE_HEIGHT = 900; // virtual page height for Y offset
-  const allRawItems: TextItem[] = [];
-  const allMergedItems: TextItem[] = [];
+  const PAGE_HEIGHT = 900;
+  const allItems: TextItem[] = [];
 
-  // Collect items from all pages with global Y (page 1 highest Y)
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
     const rawItems = await getTextItems(page);
     const yOffset = (doc.numPages - p) * PAGE_HEIGHT;
-    const offsetItems = rawItems.map(i => ({ ...i, y: i.y + yOffset }));
-    allRawItems.push(...offsetItems);
-    allMergedItems.push(...mergeTextItems(offsetItems));
+    allItems.push(...rawItems.map(i => ({ ...i, y: i.y + yOffset })));
   }
 
-  // Find date items containing "注⽂⽇" or standalone dates near order headers
-  const orderDateItems = allMergedItems.filter(i =>
-    /\d{4}\/\d{2}\/\d{2}/.test(i.str) && i.x >= 80 && i.x <= 180 &&
-    (i.str.includes('⽂') || i.str.includes('文') || i.str.includes('注'))
-  );
-  const standaloneDates = allRawItems.filter(i =>
+  // Build municipality rows: collect chars at x=80-160 grouped by Y, join into strings
+  // Then filter to rows containing prefecture/city suffixes and short enough to be a real name
+  const municRows = collectRowTexts(allItems, 80, 160)
+    .filter(r => r.text.length >= 3 && r.text.length <= 15 && /[都道府県市区町村郡]/.test(r.text))
+    .filter(r => !/[0-9a-zA-Z:/.?=&]/.test(r.text)); // exclude URLs, order numbers
+
+  // Find standalone date items at x~115
+  const dateItems = allItems.filter(i =>
     /^\d{4}\/\d{2}\/\d{2}/.test(i.str) && i.x >= 100 && i.x <= 170
   );
-  const allDateEntries = [...orderDateItems, ...standaloneDates];
 
-  // Find amount items: "NNN,NNN" at x~141
-  const amountItems = allRawItems.filter(i =>
+  // Find amount items at x~141
+  const amountItems = allItems.filter(i =>
     i.x >= 130 && i.x <= 180 && /^[\d,]+$/.test(i.str) && parseAmount(i.str) >= 2000
   );
 
-  // Find municipality items: merged strings containing prefecture/city suffixes
-  // Real municipality names are short (e.g. "熊本県⾼森町", max ~12 chars)
-  const municItems = allMergedItems.filter(i =>
-    i.x >= 70 && i.x <= 160 &&
-    i.str.length <= 15 &&
-    /[都道府県市区町村郡]/.test(i.str) &&
-    !i.str.includes('注') && !i.str.includes('番')
-  );
-
-  // Match each amount to its nearest preceding municipality and date (higher global Y = earlier)
+  // Match each amount to nearest preceding municipality and date
   const donations: FurusatoDonation[] = [];
   for (const amtItem of amountItems) {
-    const munic = municItems
+    const munic = municRows
       .filter(m => m.y > amtItem.y)
       .sort((a, b) => a.y - b.y)[0];
 
-    const dateEntry = allDateEntries
+    const dateEntry = dateItems
       .filter(d => d.y > amtItem.y && d.y < (munic?.y ?? Infinity) + 10)
       .sort((a, b) => a.y - b.y)[0];
 
@@ -171,7 +159,7 @@ const parseRakutenFurusatoPdf = async (doc: any): Promise<FurusatoDonation[]> =>
       const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : '';
       donations.push({
         date,
-        municipality: munic.str,
+        municipality: munic.text,
         amount: parseAmount(amtItem.str),
         source: 'rakuten',
       });
