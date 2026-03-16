@@ -1,3 +1,11 @@
+export interface DepreciationAsset {
+  name: string;
+  acquisitionCost: number; // 取得価額
+  usefulLife: number;      // 耐用年数
+  rate: number;            // 償却率
+  bookValue: number;       // 未償却残高（期末）
+}
+
 export interface PreviousYearData {
   year: number;
   // Assets 期末
@@ -15,6 +23,8 @@ export interface PreviousYearData {
   jigyounushiKashi: number;
   motoirekin: number;
   shotokuBeforeDeduction: number;
+  // Depreciation schedule from page 3
+  depreciationAssets: DepreciationAsset[];
 }
 
 interface TextItem {
@@ -73,6 +83,58 @@ const getTextItems = async (page: any): Promise<TextItem[]> => {
     }));
 };
 
+// Parse 減価償却費の計算 table from page 3
+// Each row: name(x≈62), 取得価額(x≈256-268), 耐用年数(x≈348-353), 償却率(x≈374), 未償却残高(x≈700+)
+const parseDepreciationSchedule = (items: TextItem[]): DepreciationAsset[] => {
+  // Filter to depreciation table area (y between ~120 and ~260)
+  const tableItems = items.filter(i => i.y >= 120 && i.y <= 260);
+
+  // Group items by row (y within ±12 tolerance)
+  const rows: TextItem[][] = [];
+  const used = new Set<number>();
+  for (let idx = 0; idx < tableItems.length; idx++) {
+    if (used.has(idx)) continue;
+    const row = [tableItems[idx]];
+    used.add(idx);
+    for (let j = idx + 1; j < tableItems.length; j++) {
+      if (!used.has(j) && Math.abs(tableItems[j].y - tableItems[idx].y) <= 12) {
+        row.push(tableItems[j]);
+        used.add(j);
+      }
+    }
+    rows.push(row);
+  }
+
+  const assets: DepreciationAsset[] = [];
+  for (const row of rows) {
+    // Need at least: name, 取得価額, 耐用年数, 未償却残高
+    const nameItems = row.filter(i => i.x < 130 && !/^[\d,]+$/.test(i.str) && !['定額', '定率', '－'].includes(i.str));
+    const name = nameItems.map(i => i.str).join('');
+    if (!name) continue;
+
+    // 取得価額: x around 240-280 range, numeric
+    const costItem = row.find(i => i.x >= 240 && i.x <= 290 && /^[\d,]+$/.test(i.str.replace(/,/g, '')));
+    // 耐用年数: x around 340-360, small number
+    const lifeItem = row.find(i => i.x >= 335 && i.x <= 365 && /^\d{1,2}$/.test(i.str));
+    // 未償却残高: x >= 690, rightmost numeric value
+    const bookItems = row.filter(i => i.x >= 690 && /^[\d,]+$/.test(i.str.replace(/,/g, '')));
+    const bookItem = bookItems.length > 0 ? bookItems[bookItems.length - 1] : null;
+    // 償却率: x around 370-385
+    const rateItem = row.find(i => i.x >= 365 && i.x <= 395 && /^0\.\d+$/.test(i.str));
+
+    if (!costItem || !lifeItem) continue;
+
+    assets.push({
+      name,
+      acquisitionCost: parseNumber(costItem.str),
+      usefulLife: parseInt(lifeItem.str, 10) || 0,
+      rate: rateItem ? parseFloat(rateItem.str) : 0,
+      bookValue: bookItem ? parseNumber(bookItem.str) : 0,
+    });
+  }
+  return assets;
+};
+
 export const parsePreviousYearPdf = async (file: File): Promise<PreviousYearData> => {
   const pdfjsLib = await import('pdfjs-dist');
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
@@ -81,6 +143,11 @@ export const parsePreviousYearPdf = async (file: File): Promise<PreviousYearData
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
 
   if (doc.numPages < 4) throw new Error('PDFのページ数が不足しています（4ページ以上必要）');
+
+  // Parse depreciation schedule from page 3
+  const page3 = await doc.getPage(3);
+  const items3 = await getTextItems(page3);
+  const depreciationAssets = parseDepreciationSchedule(items3);
 
   // Extract year from page 4 header area (令和X年 at y~524, x~489)
   const page4 = await doc.getPage(4);
@@ -131,5 +198,6 @@ export const parsePreviousYearPdf = async (file: File): Promise<PreviousYearData
     jigyounushiKashi,
     motoirekin: liabilityEnd.motoirekin ?? 0,
     shotokuBeforeDeduction: liabilityEnd.shotokuBeforeDeduction ?? 0,
+    depreciationAssets,
   };
 };

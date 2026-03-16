@@ -204,6 +204,14 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
     try {
       const prev = await parsePreviousYearPdf(file);
       const newMotoirekin = prev.motoirekin + prev.jigyounushiKari - prev.jigyounushiKashi + prev.shotokuBeforeDeduction;
+
+      // Match depreciation assets to balance sheet categories by bookValue
+      const matchAsset = (bsValue: number) =>
+        prev.depreciationAssets.find(a => a.bookValue > 1 && Math.abs(a.bookValue - bsValue) <= 1);
+      const buildingDep = matchAsset(prev.building);
+      const buildingEquipDep = matchAsset(prev.buildingEquipment);
+      const toolsDep = prev.tools > 1 ? matchAsset(prev.tools) : undefined;
+
       setBs(p => ({
         ...p,
         cashStart: prev.cash,
@@ -214,6 +222,16 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
         buildingStart: prev.building,
         buildingEquipmentStart: prev.buildingEquipment,
         toolsStart: prev.tools <= 1 ? 0 : prev.tools,
+        // Auto-fill depreciation from PDF
+        buildingAsset: buildingDep
+          ? { acquisitionCost: buildingDep.acquisitionCost, usefulLife: buildingDep.usefulLife, assetType: buildingDep.name }
+          : p.buildingAsset,
+        buildingEquipmentAsset: buildingEquipDep
+          ? { acquisitionCost: buildingEquipDep.acquisitionCost, usefulLife: buildingEquipDep.usefulLife, assetType: buildingEquipDep.name }
+          : p.buildingEquipmentAsset,
+        toolsAsset: toolsDep
+          ? { acquisitionCost: toolsDep.acquisitionCost, usefulLife: toolsDep.usefulLife, assetType: toolsDep.name }
+          : p.toolsAsset,
         accountsPayableStart: prev.accountsPayable,
         accountsPayableEnd: p.accountsPayableEnd || prev.accountsPayable,
         unpaidStart: prev.unpaid,
