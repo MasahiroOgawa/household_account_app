@@ -126,15 +126,15 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
     saveTaxFilingState({ withholding, furusatoDonations, businessSources });
   }, [withholding, furusatoDonations, businessSources]);
 
-  // Auto-calculate deposit start from business bank balances
-  useEffect(() => {
-    if (businessSources.length > 0) {
-      const autoDeposit = calculateDepositStart(transactions, selectedYear, businessSources);
-      if (autoDeposit > 0) {
-        setBs(prev => ({ ...prev, depositStart: autoDeposit }));
-      }
-    }
+  // Auto-calculate deposit start from business bank balances (overrides manual/PDF value)
+  const autoDepositStart = useMemo(() => {
+    if (businessSources.length === 0) return null;
+    const val = calculateDepositStart(transactions, selectedYear, businessSources);
+    return val > 0 ? val : null;
   }, [businessSources, selectedYear, transactions]);
+
+  // Use auto-calculated value when available, otherwise fall back to manually entered bs.depositStart
+  const effectiveDepositStart = autoDepositStart ?? bs.depositStart;
 
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -196,7 +196,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   const income = Math.max(0, profit - BLUE_DEDUCTION);
 
   // 貸借対照表 期末計算
-  const depositEnd = bs.depositStart + data.revenue - adjusted.totalExpenses - adjusted.jigyounushiKashi + data.jigyounushiKari;
+  const depositEnd = effectiveDepositStart + data.revenue - adjusted.totalExpenses - adjusted.jigyounushiKashi + data.jigyounushiKari;
 
   const updateBs = (field: keyof BalanceSheetState, value: string) => {
     setBs(prev => ({ ...prev, [field]: Number(value) || 0 }));
@@ -423,7 +423,15 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
             </thead>
             <tbody>
               <BsRow label="現金" startField="cashStart" endEditable={false} />
-              <BsRow label="その他の預金" startField="depositStart" endValue={depositEnd} endEditable={false} />
+              <tr>
+                <td className="border border-gray-300 px-3 py-1">その他の預金</td>
+                {autoDepositStart !== null ? (
+                  <CopyCell value={effectiveDepositStart} className="border border-gray-300 bg-blue-50" />
+                ) : (
+                  <EditableCell field="depositStart" value={bs.depositStart} />
+                )}
+                <CopyCell value={depositEnd} className="border border-gray-300" />
+              </tr>
               <BsRow label="売掛金" startField="accountsReceivableStart" endField="accountsReceivableEnd" />
               <BsRow label="棚卸資産" startField="inventoryStart" endField="inventoryEnd" />
               <BsRow label="建物" startField="buildingStart" endField="buildingEnd" />
