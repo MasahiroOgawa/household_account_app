@@ -42,13 +42,12 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 );
 
 // 家事按分 targets and default ratio
-const KAJIANBUN_TARGETS = ['水道光熱費', '通信費', '地代家賃', '修繕積立金', '減価償却費'] as const;
+const KAJIANBUN_TARGETS = ['水道光熱費', '通信費', '地代家賃', '修繕積立金'] as const;
 interface KajianbunState {
   水道光熱費: number;
   通信費: number;
   地代家賃: number;
   修繕積立金: number;
-  減価償却費: number;
 }
 
 const defaultKajianbun: KajianbunState = {
@@ -56,7 +55,6 @@ const defaultKajianbun: KajianbunState = {
   通信費: 71,
   地代家賃: 71,
   修繕積立金: 71,
-  減価償却費: 71,
 };
 
 // 定額法 償却率表 (耐用年数 → 償却率)
@@ -103,6 +101,7 @@ interface DepreciableAsset {
   acquisitionCost: number; // 取得価額
   usefulLife: number;      // 耐用年数
   assetType: string;       // 選択した資産種別
+  businessRatio: number;   // 事業専用割合 (%)
 }
 
 // 貸借対照表 editable fields
@@ -143,9 +142,9 @@ const defaultBalanceSheet: BalanceSheetState = {
   buildingEquipmentEnd: 0,
   toolsStart: 0,
   toolsEnd: 0,
-  buildingAsset: { acquisitionCost: 0, usefulLife: 0, assetType: '' },
-  buildingEquipmentAsset: { acquisitionCost: 0, usefulLife: 0, assetType: '' },
-  toolsAsset: { acquisitionCost: 0, usefulLife: 0, assetType: '' },
+  buildingAsset: { acquisitionCost: 0, usefulLife: 0, assetType: '', businessRatio: 100 },
+  buildingEquipmentAsset: { acquisitionCost: 0, usefulLife: 0, assetType: '', businessRatio: 100 },
+  toolsAsset: { acquisitionCost: 0, usefulLife: 0, assetType: '', businessRatio: 100 },
   accountsPayableStart: 0,
   accountsPayableEnd: 0,
   unpaidStart: 0,
@@ -224,13 +223,13 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
         toolsStart: prev.tools <= 1 ? 0 : prev.tools,
         // Auto-fill depreciation from PDF
         buildingAsset: buildingDep
-          ? { acquisitionCost: buildingDep.acquisitionCost, usefulLife: buildingDep.usefulLife, assetType: buildingDep.name }
+          ? { acquisitionCost: buildingDep.acquisitionCost, usefulLife: buildingDep.usefulLife, assetType: buildingDep.name, businessRatio: buildingDep.businessRatio }
           : p.buildingAsset,
         buildingEquipmentAsset: buildingEquipDep
-          ? { acquisitionCost: buildingEquipDep.acquisitionCost, usefulLife: buildingEquipDep.usefulLife, assetType: buildingEquipDep.name }
+          ? { acquisitionCost: buildingEquipDep.acquisitionCost, usefulLife: buildingEquipDep.usefulLife, assetType: buildingEquipDep.name, businessRatio: buildingEquipDep.businessRatio }
           : p.buildingEquipmentAsset,
         toolsAsset: toolsDep
-          ? { acquisitionCost: toolsDep.acquisitionCost, usefulLife: toolsDep.usefulLife, assetType: toolsDep.name }
+          ? { acquisitionCost: toolsDep.acquisitionCost, usefulLife: toolsDep.usefulLife, assetType: toolsDep.name, businessRatio: toolsDep.businessRatio }
           : p.toolsAsset,
         accountsPayableStart: prev.accountsPayable,
         accountsPayableEnd: p.accountsPayableEnd || prev.accountsPayable,
@@ -263,12 +262,20 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   const toolsDepreciation = calcDepreciation(bs.toolsAsset);
   const totalDepreciation = buildingDepreciation + buildingEquipmentDepreciation + toolsDepreciation;
 
+  // 経費算入額 = 各資産の償却費 × 事業専用割合 (same as e-Tax 減価償却費の計算)
+  const calcExpenseAmount = (asset: DepreciableAsset): number => {
+    const dep = calcDepreciation(asset);
+    return Math.floor(dep * asset.businessRatio / 100);
+  };
+  const depreciationExpense = calcExpenseAmount(bs.buildingAsset)
+    + calcExpenseAmount(bs.buildingEquipmentAsset) + calcExpenseAmount(bs.toolsAsset);
+
   // 家事按分: split kamoku between business and private
   const adjusted = useMemo(() => {
     const kamoku = { ...data.kamokuTotals };
-    // Add auto-calculated depreciation if no transaction-based depreciation exists
-    if (totalDepreciation > 0 && !kamoku['減価償却費']) {
-      kamoku['減価償却費'] = totalDepreciation;
+    // Add depreciation expense (already includes 事業専用割合, no further 家事按分)
+    if (depreciationExpense > 0 && !kamoku['減価償却費']) {
+      kamoku['減価償却費'] = depreciationExpense;
     }
     let privateTotal = 0;
     for (const name of KAJIANBUN_TARGETS) {
@@ -280,9 +287,11 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
       kamoku[name] = bizAmount;
     }
     const totalExpenses = Object.values(kamoku).reduce((s, v) => s + v, 0);
-    const jigyounushiKashi = data.jigyounushiKashi + privateTotal;
+    // Private portion of depreciation also goes to 事業主貸
+    const depPrivate = totalDepreciation - depreciationExpense;
+    const jigyounushiKashi = data.jigyounushiKashi + privateTotal + depPrivate;
     return { kamoku, totalExpenses, jigyounushiKashi };
-  }, [data, kajianbun, totalDepreciation]);
+  }, [data, kajianbun, depreciationExpense, totalDepreciation]);
 
   const sortedKamoku = useMemo(() => getSortedKamoku(adjusted.kamoku), [adjusted]);
   const profit = data.revenue - adjusted.totalExpenses;
@@ -549,6 +558,8 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               <th className="border border-gray-300 px-2 py-1">耐用年数</th>
               <th className="border border-gray-300 px-2 py-1">償却率</th>
               <th className="border border-gray-300 px-2 py-1">償却費</th>
+              <th className="border border-gray-300 px-2 py-1">事業専用割合</th>
+              <th className="border border-gray-300 px-2 py-1">経費算入額</th>
             </tr>
           </thead>
           <tbody>
@@ -597,12 +608,28 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
                 <td className="border border-gray-300 px-2 py-1 text-right font-mono">
                   {dep > 0 ? dep.toLocaleString() : '-'}
                 </td>
+                <td className="border border-gray-300 px-1 py-1">
+                  <input
+                    type="number"
+                    value={bs[field].businessRatio || ''}
+                    onChange={e => setBs(p => ({ ...p, [field]: { ...p[field], businessRatio: Number(e.target.value) || 0 } }))}
+                    className="w-16 text-right border border-gray-300 rounded px-1 py-0.5"
+                  />
+                  <span className="text-xs text-gray-500">%</span>
+                </td>
+                <td className="border border-gray-300 px-2 py-1 text-right font-mono">
+                  {dep > 0 ? Math.floor(dep * bs[field].businessRatio / 100).toLocaleString() : '-'}
+                </td>
               </tr>
             ))}
             <tr className="bg-gray-50 font-bold">
               <td colSpan={5} className="border border-gray-300 px-2 py-1 text-right">合計</td>
               <td className="border border-gray-300 px-2 py-1 text-right font-mono">
                 {totalDepreciation > 0 ? totalDepreciation.toLocaleString() : '-'}
+              </td>
+              <td className="border border-gray-300 px-2 py-1"></td>
+              <td className="border border-gray-300 px-2 py-1 text-right font-mono">
+                {depreciationExpense > 0 ? depreciationExpense.toLocaleString() : '-'}
               </td>
             </tr>
           </tbody>

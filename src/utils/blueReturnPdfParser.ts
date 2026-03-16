@@ -3,6 +3,7 @@ export interface DepreciationAsset {
   acquisitionCost: number; // 取得価額
   usefulLife: number;      // 耐用年数
   rate: number;            // 償却率
+  businessRatio: number;   // 事業専用割合 (%)
   bookValue: number;       // 未償却残高（期末）
 }
 
@@ -121,6 +122,8 @@ const parseDepreciationSchedule = (items: TextItem[]): DepreciationAsset[] => {
     const bookItem = bookItems.length > 0 ? bookItems[bookItems.length - 1] : null;
     // 償却率: x around 370-385
     const rateItem = row.find(i => i.x >= 365 && i.x <= 395 && /^0\.\d+$/.test(i.str));
+    // 事業専用割合: x around 600-620
+    const ratioItem = row.find(i => i.x >= 595 && i.x <= 625 && /^\d+\.\d+$/.test(i.str));
 
     if (!costItem || !lifeItem) continue;
 
@@ -129,6 +132,7 @@ const parseDepreciationSchedule = (items: TextItem[]): DepreciationAsset[] => {
       acquisitionCost: parseNumber(costItem.str),
       usefulLife: parseInt(lifeItem.str, 10) || 0,
       rate: rateItem ? parseFloat(rateItem.str) : 0,
+      businessRatio: ratioItem ? parseFloat(ratioItem.str) : 100,
       bookValue: bookItem ? parseNumber(bookItem.str) : 0,
     });
   }
