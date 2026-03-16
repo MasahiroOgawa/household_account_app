@@ -56,6 +56,22 @@ const defaultKajianbun: KajianbunState = {
   修繕積立金: 71,
 };
 
+// 定額法 償却率表 (耐用年数 → 償却率)
+const DEPRECIATION_RATES: Record<number, number> = {
+  2: 0.500, 3: 0.334, 4: 0.250, 5: 0.200, 6: 0.167, 7: 0.143, 8: 0.125,
+  9: 0.112, 10: 0.100, 11: 0.091, 12: 0.084, 13: 0.077, 14: 0.072, 15: 0.067,
+  16: 0.063, 17: 0.059, 18: 0.056, 19: 0.053, 20: 0.050, 21: 0.048, 22: 0.046,
+  23: 0.044, 24: 0.042, 25: 0.040, 26: 0.039, 27: 0.038, 28: 0.036, 29: 0.035,
+  30: 0.034, 31: 0.033, 32: 0.032, 33: 0.031, 34: 0.030, 35: 0.029, 36: 0.028,
+  37: 0.028, 38: 0.027, 39: 0.026, 40: 0.025, 41: 0.025, 42: 0.024, 43: 0.024,
+  44: 0.023, 45: 0.023, 46: 0.022, 47: 0.022, 48: 0.021, 49: 0.021, 50: 0.020,
+};
+
+interface DepreciableAsset {
+  acquisitionCost: number; // 取得価額
+  usefulLife: number;      // 耐用年数
+}
+
 // 貸借対照表 editable fields
 interface BalanceSheetState {
   cashStart: number;
@@ -70,7 +86,10 @@ interface BalanceSheetState {
   buildingEquipmentEnd: number;
   toolsStart: number;
   toolsEnd: number;
-  depreciation: number;
+  // 減価償却: per-asset acquisition cost & useful life
+  buildingAsset: DepreciableAsset;
+  buildingEquipmentAsset: DepreciableAsset;
+  toolsAsset: DepreciableAsset;
   accountsPayableStart: number;
   accountsPayableEnd: number;
   unpaidStart: number;
@@ -91,7 +110,9 @@ const defaultBalanceSheet: BalanceSheetState = {
   buildingEquipmentEnd: 0,
   toolsStart: 0,
   toolsEnd: 0,
-  depreciation: 0,
+  buildingAsset: { acquisitionCost: 0, usefulLife: 0 },
+  buildingEquipmentAsset: { acquisitionCost: 0, usefulLife: 0 },
+  toolsAsset: { acquisitionCost: 0, usefulLife: 0 },
   accountsPayableStart: 0,
   accountsPayableEnd: 0,
   unpaidStart: 0,
@@ -179,12 +200,24 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
     [transactions, selectedYear, businessSources]
   );
 
+  // 減価償却費を取得価額×償却率で自動計算 (定額法)
+  const calcDepreciation = (asset: DepreciableAsset): number => {
+    const rate = DEPRECIATION_RATES[asset.usefulLife];
+    if (!rate || asset.acquisitionCost <= 0) return 0;
+    return Math.floor(asset.acquisitionCost * rate);
+  };
+
+  const buildingDepreciation = calcDepreciation(bs.buildingAsset);
+  const buildingEquipmentDepreciation = calcDepreciation(bs.buildingEquipmentAsset);
+  const toolsDepreciation = calcDepreciation(bs.toolsAsset);
+  const totalDepreciation = buildingDepreciation + buildingEquipmentDepreciation + toolsDepreciation;
+
   // 家事按分: split kamoku between business and private
   const adjusted = useMemo(() => {
     const kamoku = { ...data.kamokuTotals };
-    // Add manual depreciation if no transaction-based depreciation exists
-    if (bs.depreciation > 0 && !kamoku['減価償却費']) {
-      kamoku['減価償却費'] = bs.depreciation;
+    // Add auto-calculated depreciation if no transaction-based depreciation exists
+    if (totalDepreciation > 0 && !kamoku['減価償却費']) {
+      kamoku['減価償却費'] = totalDepreciation;
     }
     let privateTotal = 0;
     for (const name of KAJIANBUN_TARGETS) {
@@ -198,7 +231,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
     const totalExpenses = Object.values(kamoku).reduce((s, v) => s + v, 0);
     const jigyounushiKashi = data.jigyounushiKashi + privateTotal;
     return { kamoku, totalExpenses, jigyounushiKashi };
-  }, [data, kajianbun, bs.depreciation]);
+  }, [data, kajianbun, totalDepreciation]);
 
   const sortedKamoku = useMemo(() => getSortedKamoku(adjusted.kamoku), [adjusted]);
   const profit = data.revenue - adjusted.totalExpenses;
@@ -213,34 +246,20 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
 
   const depositEnd = autoDepositEnd ?? (effectiveDepositStart + data.revenue - adjusted.totalExpenses - adjusted.jigyounushiKashi + data.jigyounushiKari);
 
-  // 減価償却費を建物・建物附属設備・工具器具備品に按分
-  // Use manual input if set, otherwise fall back to kamoku value from transactions
-  const depreciation = bs.depreciation || adjusted.kamoku['減価償却費'] || 0;
-  const depreciableAssets = useMemo(() => {
-    const building = bs.buildingStart;
-    const equipment = bs.buildingEquipmentStart;
-    const tools = bs.toolsStart;
-    const total = building + equipment + tools;
-    if (total === 0 || depreciation === 0) return { building: 0, equipment: 0, tools: 0 };
-    return {
-      building: Math.round(depreciation * building / total),
-      equipment: Math.round(depreciation * equipment / total),
-      tools: Math.round(depreciation * tools / total),
-    };
-  }, [bs.buildingStart, bs.buildingEquipmentStart, bs.toolsStart, depreciation]);
-
-  const buildingEnd = bs.buildingStart - depreciableAssets.building;
-  const buildingEquipmentEnd = bs.buildingEquipmentStart - depreciableAssets.equipment;
-  const toolsEnd = bs.toolsStart - depreciableAssets.tools;
+  const buildingEnd = Math.max(0, bs.buildingStart - buildingDepreciation);
+  const buildingEquipmentEnd = Math.max(0, bs.buildingEquipmentStart - buildingEquipmentDepreciation);
+  const toolsEnd = Math.max(0, bs.toolsStart - toolsDepreciation);
 
   // 売掛金期末 = 12月の売上（翌年1月入金）
   const accountsReceivableEnd = data.monthlyRevenue[11] || 0;
 
-  const updateBs = (field: keyof BalanceSheetState, value: string) => {
+  type NumericBsField = { [K in keyof BalanceSheetState]: BalanceSheetState[K] extends number ? K : never }[keyof BalanceSheetState];
+
+  const updateBs = (field: NumericBsField, value: string) => {
     setBs(prev => ({ ...prev, [field]: Number(value) || 0 }));
   };
 
-  const EditableCell: React.FC<{ field: keyof BalanceSheetState; value: number }> = ({ field, value }) => (
+  const EditableCell: React.FC<{ field: NumericBsField; value: number }> = ({ field, value }) => (
     <td className="px-3 py-1">
       <input
         type="number"
@@ -253,8 +272,8 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
 
   const BsRow: React.FC<{
     label: string;
-    startField: keyof BalanceSheetState;
-    endField?: keyof BalanceSheetState;
+    startField: NumericBsField;
+    endField?: NumericBsField;
     endValue?: number;
     endEditable?: boolean;
   }> = ({ label, startField, endField, endValue, endEditable = true }) => (
@@ -447,16 +466,62 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
           {pdfError}
         </div>
       )}
-      <div className="mb-3 flex items-center gap-2 text-sm">
-        <label className="font-medium">減価償却費:</label>
-        <input
-          type="number"
-          value={bs.depreciation || ''}
-          onChange={e => updateBs('depreciation', e.target.value)}
-          className="w-40 text-right border border-gray-300 rounded px-2 py-0.5"
-          placeholder="手入力"
-        />
-        <span className="text-gray-500 text-xs">（建物・設備・工具に按分して期末を計算）</span>
+      <div className="mb-3 text-sm">
+        <h4 className="font-medium mb-1">減価償却（定額法）</h4>
+        <table className="border-collapse border border-gray-300 text-sm">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="border border-gray-300 px-2 py-1">資産</th>
+              <th className="border border-gray-300 px-2 py-1">取得価額</th>
+              <th className="border border-gray-300 px-2 py-1">耐用年数</th>
+              <th className="border border-gray-300 px-2 py-1">償却率</th>
+              <th className="border border-gray-300 px-2 py-1">償却費</th>
+            </tr>
+          </thead>
+          <tbody>
+            {([
+              ['建物', 'buildingAsset', buildingDepreciation] as const,
+              ['建物附属設備', 'buildingEquipmentAsset', buildingEquipmentDepreciation] as const,
+              ['工具器具備品', 'toolsAsset', toolsDepreciation] as const,
+            ]).map(([label, field, dep]) => (
+              <tr key={field}>
+                <td className="border border-gray-300 px-2 py-1">{label}</td>
+                <td className="border border-gray-300 px-1 py-1">
+                  <input
+                    type="number"
+                    value={bs[field].acquisitionCost || ''}
+                    onChange={e => setBs(p => ({ ...p, [field]: { ...p[field], acquisitionCost: Number(e.target.value) || 0 } }))}
+                    className="w-32 text-right border border-gray-300 rounded px-1 py-0.5"
+                  />
+                </td>
+                <td className="border border-gray-300 px-1 py-1">
+                  <select
+                    value={bs[field].usefulLife || ''}
+                    onChange={e => setBs(p => ({ ...p, [field]: { ...p[field], usefulLife: Number(e.target.value) || 0 } }))}
+                    className="w-20 border border-gray-300 rounded px-1 py-0.5"
+                  >
+                    <option value="">-</option>
+                    {Object.keys(DEPRECIATION_RATES).map(y => (
+                      <option key={y} value={y}>{y}年</option>
+                    ))}
+                  </select>
+                </td>
+                <td className="border border-gray-300 px-2 py-1 text-right">
+                  {DEPRECIATION_RATES[bs[field].usefulLife] ?? '-'}
+                </td>
+                <td className="border border-gray-300 px-2 py-1 text-right font-mono">
+                  {dep > 0 ? dep.toLocaleString() : '-'}
+                </td>
+              </tr>
+            ))}
+            <tr className="bg-gray-50 font-bold">
+              <td colSpan={4} className="border border-gray-300 px-2 py-1 text-right">合計</td>
+              <td className="border border-gray-300 px-2 py-1 text-right font-mono">
+                {totalDepreciation > 0 ? totalDepreciation.toLocaleString() : '-'}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <div className="grid grid-cols-2 gap-4">
         {/* 資産の部 */}
