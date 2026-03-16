@@ -48,9 +48,10 @@ export const isBusinessTransaction = (t: Transaction): boolean => {
     || (t.type === 'expense' && keys.expense.has(t.category));
 };
 
-export const calculateBlueReturn = (transactions: Transaction[], year: number): BlueReturnData => {
+export const calculateBlueReturn = (transactions: Transaction[], year: number, businessSources?: string[]): BlueReturnData => {
   const keys = getJapaneseKamokuKeys();
   const yearTxns = transactions.filter(t => t.date.startsWith(String(year)));
+  const bizSourceSet = businessSources && businessSources.length > 0 ? new Set(businessSources) : null;
 
   let revenue = 0;
   let jigyounushiKashi = 0;
@@ -64,13 +65,16 @@ export const calculateBlueReturn = (transactions: Transaction[], year: number): 
     const amt = Math.abs(t.amount);
 
     if (t.type === 'income' && keys.income.has(t.category)) {
-      // Business income: only Japanese income subcategories (売上, 雑収入) count as revenue
+      // Business income: counted regardless of source bank
       revenue += amt;
       monthlyRevenue[month] += amt;
     } else if (t.type === 'expense' && keys.expense.has(t.category)) {
-      // Business expense: only Japanese expense subcategories count as 経費
+      // Business expense: counted regardless of source bank
       kamokuTotals[t.category] = (kamokuTotals[t.category] || 0) + amt;
       monthlyExpenses[month] += amt;
+    } else if (bizSourceSet && !bizSourceSet.has(t.source)) {
+      // Private transaction from a non-business bank → ignore entirely
+      continue;
     } else if (t.type === 'expense') {
       // Private expense through business account → 事業主貸
       jigyounushiKashi += amt;
@@ -98,4 +102,9 @@ export const getSortedKamoku = (kamokuTotals: Record<string, number>): [string, 
 export const getAvailableYears = (transactions: Transaction[]): number[] => {
   const years = new Set(transactions.map(t => new Date(t.date).getFullYear()));
   return [...years].sort((a, b) => b - a);
+};
+
+export const getAvailableSources = (transactions: Transaction[]): string[] => {
+  const sources = new Set(transactions.map(t => t.source));
+  return [...sources].sort();
 };

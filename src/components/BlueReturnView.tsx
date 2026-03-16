@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Transaction } from '../types/Transaction';
-import { calculateBlueReturn, getSortedKamoku, getAvailableYears, BlueReturnData } from '../utils/blueReturnCalculator';
+import { calculateBlueReturn, getSortedKamoku, getAvailableYears, getAvailableSources, BlueReturnData } from '../utils/blueReturnCalculator';
 import { parsePreviousYearPdf } from '../utils/blueReturnPdfParser';
 import { WithholdingTaxData } from '../utils/withholdingTaxPdfParser';
 import { FurusatoDonation } from '../utils/furusatoTaxPdfParser';
@@ -109,18 +109,22 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   // Tax filing persistent state
   const [withholding, setWithholding] = useState<WithholdingTaxData | null>(null);
   const [furusatoDonations, setFurusatoDonations] = useState<FurusatoDonation[]>([]);
+  const [businessSources, setBusinessSources] = useState<string[]>([]);
+
+  const availableSources = useMemo(() => getAvailableSources(transactions), [transactions]);
 
   // Load persisted state on mount
   useEffect(() => {
     const state = loadTaxFilingState();
     if (state.withholding) setWithholding(state.withholding);
     if (state.furusatoDonations.length > 0) setFurusatoDonations(state.furusatoDonations);
+    if (state.businessSources.length > 0) setBusinessSources(state.businessSources);
   }, []);
 
   // Persist state changes
   useEffect(() => {
-    saveTaxFilingState({ withholding, furusatoDonations });
-  }, [withholding, furusatoDonations]);
+    saveTaxFilingState({ withholding, furusatoDonations, businessSources });
+  }, [withholding, furusatoDonations, businessSources]);
 
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -156,8 +160,8 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   };
 
   const data: BlueReturnData = useMemo(
-    () => calculateBlueReturn(transactions, selectedYear),
-    [transactions, selectedYear]
+    () => calculateBlueReturn(transactions, selectedYear, businessSources),
+    [transactions, selectedYear, businessSources]
   );
 
   // 家事按分: split kamoku between business and private
@@ -224,8 +228,45 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
         : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'
     }`;
 
+  const toggleSource = (source: string) => {
+    setBusinessSources(prev =>
+      prev.includes(source) ? prev.filter(s => s !== source) : [...prev, source]
+    );
+  };
+
   const renderKessanContent = () => (
     <>
+      {/* Business bank selection */}
+      <SectionTitle>事業用口座の選択</SectionTitle>
+      <p className="text-sm text-gray-600 mb-2">事業用の口座を選択してください。選択外の口座の個人取引は事業主貸/借に含まれません。</p>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {availableSources.map(source => (
+          <label key={source} className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer text-sm ${
+            businessSources.includes(source)
+              ? 'bg-blue-100 border-blue-500 text-blue-800'
+              : 'bg-gray-50 border-gray-300 text-gray-600'
+          }`}>
+            <input
+              type="checkbox"
+              checked={businessSources.includes(source)}
+              onChange={() => toggleSource(source)}
+              className="sr-only"
+            />
+            <span className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+              businessSources.includes(source) ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-400'
+            }`}>
+              {businessSources.includes(source) && '✓'}
+            </span>
+            {source}
+          </label>
+        ))}
+      </div>
+      {businessSources.length === 0 && (
+        <div className="mb-4 p-2 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800">
+          口座が未選択です。すべての取引が事業主貸/借に含まれます。
+        </div>
+      )}
+
       {/* Section 1: 損益計算書 */}
       <SectionTitle>損益計算書</SectionTitle>
       <table className="w-full border-collapse border border-gray-300 text-sm">

@@ -4,7 +4,7 @@ import { FurusatoDonation } from './furusatoTaxPdfParser';
 export interface TaxFilingState {
   withholding: WithholdingTaxData | null;
   furusatoDonations: FurusatoDonation[];
-  // Balance sheet and kajianbun are kept in BlueReturnView local state
+  businessSources: string[]; // source names treated as business bank accounts
 }
 
 const STORAGE_KEY = 'tax_filing_state';
@@ -12,6 +12,7 @@ const STORAGE_KEY = 'tax_filing_state';
 const defaultState: TaxFilingState = {
   withholding: null,
   furusatoDonations: [],
+  businessSources: [],
 };
 
 export const loadTaxFilingState = (): TaxFilingState => {
