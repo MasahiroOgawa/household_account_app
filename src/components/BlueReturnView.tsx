@@ -5,6 +5,7 @@ import { parsePreviousYearPdf } from '../utils/blueReturnPdfParser';
 import { WithholdingTaxData } from '../utils/withholdingTaxPdfParser';
 import { FurusatoDonation } from '../utils/furusatoTaxPdfParser';
 import { loadTaxFilingState, saveTaxFilingState } from '../utils/taxFilingState';
+import { configLoader } from '../utils/config/configLoader';
 import { WithholdingTaxSection } from './WithholdingTaxSection';
 import { FurusatoSection } from './FurusatoSection';
 import { TaxFormB } from './TaxFormB';
@@ -67,9 +68,39 @@ const DEPRECIATION_RATES: Record<number, number> = {
   44: 0.023, 45: 0.023, 46: 0.022, 47: 0.022, 48: 0.021, 49: 0.021, 50: 0.020,
 };
 
+// Build flat option lists from the depreciation useful life config
+// Each option: { label, usefulLife }
+interface UsefulLifeOption { label: string; usefulLife: number }
+const buildUsefulLifeOptions = (category: string): UsefulLifeOption[] => {
+  const table = configLoader.getDepreciationTable();
+  const data = table[category];
+  if (!data) return [];
+  const options: UsefulLifeOption[] = [];
+  for (const [key, val] of Object.entries(data)) {
+    if (typeof val === 'number') {
+      options.push({ label: key, usefulLife: val });
+    } else {
+      // Nested: structure → purpose → years
+      for (const [subKey, subVal] of Object.entries(val)) {
+        options.push({ label: `${key} / ${subKey}`, usefulLife: subVal as number });
+      }
+    }
+  }
+  return options;
+};
+
+const BUILDING_OPTIONS = buildUsefulLifeOptions('建物');
+const BUILDING_EQUIPMENT_OPTIONS = buildUsefulLifeOptions('建物附属設備');
+const TOOLS_OPTIONS = [
+  ...buildUsefulLifeOptions('工具'),
+  ...buildUsefulLifeOptions('器具・備品'),
+  ...buildUsefulLifeOptions('車両・運搬具'),
+];
+
 interface DepreciableAsset {
   acquisitionCost: number; // 取得価額
   usefulLife: number;      // 耐用年数
+  assetType: string;       // 選択した資産種別
 }
 
 // 貸借対照表 editable fields
@@ -110,9 +141,9 @@ const defaultBalanceSheet: BalanceSheetState = {
   buildingEquipmentEnd: 0,
   toolsStart: 0,
   toolsEnd: 0,
-  buildingAsset: { acquisitionCost: 0, usefulLife: 0 },
-  buildingEquipmentAsset: { acquisitionCost: 0, usefulLife: 0 },
-  toolsAsset: { acquisitionCost: 0, usefulLife: 0 },
+  buildingAsset: { acquisitionCost: 0, usefulLife: 0, assetType: '' },
+  buildingEquipmentAsset: { acquisitionCost: 0, usefulLife: 0, assetType: '' },
+  toolsAsset: { acquisitionCost: 0, usefulLife: 0, assetType: '' },
   accountsPayableStart: 0,
   accountsPayableEnd: 0,
   unpaidStart: 0,
@@ -472,6 +503,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
           <thead>
             <tr className="bg-gray-50">
               <th className="border border-gray-300 px-2 py-1">資産</th>
+              <th className="border border-gray-300 px-2 py-1">種別</th>
               <th className="border border-gray-300 px-2 py-1">取得価額</th>
               <th className="border border-gray-300 px-2 py-1">耐用年数</th>
               <th className="border border-gray-300 px-2 py-1">償却率</th>
@@ -480,12 +512,27 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
           </thead>
           <tbody>
             {([
-              ['建物', 'buildingAsset', buildingDepreciation] as const,
-              ['建物附属設備', 'buildingEquipmentAsset', buildingEquipmentDepreciation] as const,
-              ['工具器具備品', 'toolsAsset', toolsDepreciation] as const,
-            ]).map(([label, field, dep]) => (
+              ['建物', 'buildingAsset', buildingDepreciation, BUILDING_OPTIONS] as const,
+              ['建物附属設備', 'buildingEquipmentAsset', buildingEquipmentDepreciation, BUILDING_EQUIPMENT_OPTIONS] as const,
+              ['工具器具備品', 'toolsAsset', toolsDepreciation, TOOLS_OPTIONS] as const,
+            ]).map(([label, field, dep, options]) => (
               <tr key={field}>
                 <td className="border border-gray-300 px-2 py-1">{label}</td>
+                <td className="border border-gray-300 px-1 py-1">
+                  <select
+                    value={bs[field].assetType}
+                    onChange={e => {
+                      const selected = options.find(o => o.label === e.target.value);
+                      setBs(p => ({ ...p, [field]: { ...p[field], assetType: e.target.value, usefulLife: selected?.usefulLife ?? 0 } }));
+                    }}
+                    className="w-56 border border-gray-300 rounded px-1 py-0.5 text-xs"
+                  >
+                    <option value="">選択してください</option>
+                    {options.map(o => (
+                      <option key={o.label} value={o.label}>{o.label}（{o.usefulLife}年）</option>
+                    ))}
+                  </select>
+                </td>
                 <td className="border border-gray-300 px-1 py-1">
                   <input
                     type="number"
@@ -494,17 +541,8 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
                     className="w-32 text-right border border-gray-300 rounded px-1 py-0.5"
                   />
                 </td>
-                <td className="border border-gray-300 px-1 py-1">
-                  <select
-                    value={bs[field].usefulLife || ''}
-                    onChange={e => setBs(p => ({ ...p, [field]: { ...p[field], usefulLife: Number(e.target.value) || 0 } }))}
-                    className="w-20 border border-gray-300 rounded px-1 py-0.5"
-                  >
-                    <option value="">-</option>
-                    {Object.keys(DEPRECIATION_RATES).map(y => (
-                      <option key={y} value={y}>{y}年</option>
-                    ))}
-                  </select>
+                <td className="border border-gray-300 px-2 py-1 text-right">
+                  {bs[field].usefulLife > 0 ? `${bs[field].usefulLife}年` : '-'}
                 </td>
                 <td className="border border-gray-300 px-2 py-1 text-right">
                   {DEPRECIATION_RATES[bs[field].usefulLife] ?? '-'}
@@ -515,7 +553,7 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               </tr>
             ))}
             <tr className="bg-gray-50 font-bold">
-              <td colSpan={4} className="border border-gray-300 px-2 py-1 text-right">合計</td>
+              <td colSpan={5} className="border border-gray-300 px-2 py-1 text-right">合計</td>
               <td className="border border-gray-300 px-2 py-1 text-right font-mono">
                 {totalDepreciation > 0 ? totalDepreciation.toLocaleString() : '-'}
               </td>
