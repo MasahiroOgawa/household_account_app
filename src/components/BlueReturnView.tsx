@@ -286,6 +286,25 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   // 売掛金期末 = 12月の売上（翌年1月入金）
   const accountsReceivableEnd = data.monthlyRevenue[11] || 0;
 
+  // 貸借対照表 合計計算
+  const assetStartTotal = bs.cashStart + effectiveDepositStart + bs.accountsReceivableStart
+    + bs.inventoryStart + bs.buildingStart + bs.buildingEquipmentStart + bs.toolsStart;
+  const assetEndTotal = bs.cashStart + depositEnd + accountsReceivableEnd
+    + (bs.inventoryEnd || bs.inventoryStart) + buildingEnd + buildingEquipmentEnd + toolsEnd;
+
+  const liabilityStart = bs.accountsPayableStart + bs.unpaidStart;
+  const liabilityEnd = (bs.accountsPayableEnd || bs.accountsPayableStart) + (bs.unpaidEnd || bs.unpaidStart);
+
+  // 元入金 期首 = 資産合計期首 - 負債合計期首 (ensures balance)
+  const motoirekinStart = assetStartTotal - liabilityStart;
+
+  // 青色申告特別控除前の所得金額
+  const shotokuBeforeDeduction = profit;
+
+  // 負債・資本の部 期末合計 = 負債 + 元入金 + 事業主借 - 事業主貸 + 所得
+  const liabilityCapitalEndTotal = liabilityEnd + motoirekinStart
+    + data.jigyounushiKari - adjusted.jigyounushiKashi + shotokuBeforeDeduction;
+
   type NumericBsField = { [K in keyof BalanceSheetState]: BalanceSheetState[K] extends number ? K : never }[keyof BalanceSheetState];
 
   const updateBs = (field: NumericBsField, value: string) => {
@@ -597,6 +616,11 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               <BsRow label="建物" startField="buildingStart" endValue={buildingEnd} endEditable={false} />
               <BsRow label="建物附属設備" startField="buildingEquipmentStart" endValue={buildingEquipmentEnd} endEditable={false} />
               <BsRow label="工具器具備品" startField="toolsStart" endValue={toolsEnd} endEditable={false} />
+              <tr className="bg-gray-100 font-bold">
+                <td className="border border-gray-300 px-3 py-1">合計</td>
+                <CopyCell value={assetStartTotal} className="border border-gray-300" />
+                <CopyCell value={assetEndTotal} className="border border-gray-300" />
+              </tr>
             </tbody>
           </table>
         </div>
@@ -627,13 +651,30 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
               </tr>
               <tr>
                 <td className="border border-gray-300 px-3 py-1">元入金</td>
-                <EditableCell field="motoirekin" value={bs.motoirekin} />
-                <CopyCell value={bs.motoirekin} className="border border-gray-300" />
+                <CopyCell value={motoirekinStart} className="border border-gray-300 bg-blue-50" />
+                <CopyCell value={motoirekinStart} className="border border-gray-300" />
+              </tr>
+              <tr>
+                <td className="border border-gray-300 px-3 py-1 text-xs">青色申告特別控除前の所得</td>
+                <td className="border border-gray-300 px-3 py-1 text-right text-gray-400">-</td>
+                <CopyCell value={shotokuBeforeDeduction} className="border border-gray-300" />
+              </tr>
+              <tr className="bg-gray-100 font-bold">
+                <td className="border border-gray-300 px-3 py-1">合計</td>
+                <CopyCell value={assetStartTotal} className="border border-gray-300" />
+                <CopyCell value={liabilityCapitalEndTotal} className="border border-gray-300" />
               </tr>
             </tbody>
           </table>
         </div>
       </div>
+      {/* Balance check */}
+      {Math.abs(assetEndTotal - liabilityCapitalEndTotal) > 1 && (
+        <div className="mt-2 p-2 bg-red-50 border border-red-300 rounded text-sm text-red-800">
+          期末不一致: 資産の部 {assetEndTotal.toLocaleString()}円 ≠ 負債・資本の部 {liabilityCapitalEndTotal.toLocaleString()}円
+          （差額: {(assetEndTotal - liabilityCapitalEndTotal).toLocaleString()}円）
+        </div>
+      )}
     </>
   );
 
