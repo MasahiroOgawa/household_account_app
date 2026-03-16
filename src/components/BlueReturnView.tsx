@@ -154,11 +154,14 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
         depositStart: prev.deposit,
         accountsReceivableStart: prev.accountsReceivable,
         inventoryStart: prev.inventory,
+        inventoryEnd: p.inventoryEnd || prev.inventory,
         buildingStart: prev.building,
         buildingEquipmentStart: prev.buildingEquipment,
         toolsStart: prev.tools,
         accountsPayableStart: prev.accountsPayable,
+        accountsPayableEnd: p.accountsPayableEnd || prev.accountsPayable,
         unpaidStart: prev.unpaid,
+        unpaidEnd: p.unpaidEnd || prev.unpaid,
         motoirekin: newMotoirekin,
       }));
       setPdfStatus('success');
@@ -203,6 +206,28 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
   }, [businessSources, selectedYear, transactions]);
 
   const depositEnd = autoDepositEnd ?? (effectiveDepositStart + data.revenue - adjusted.totalExpenses - adjusted.jigyounushiKashi + data.jigyounushiKari);
+
+  // 減価償却費を建物・建物附属設備・工具器具備品に按分
+  const depreciation = adjusted.kamoku['減価償却費'] || 0;
+  const depreciableAssets = useMemo(() => {
+    const building = bs.buildingStart;
+    const equipment = bs.buildingEquipmentStart;
+    const tools = bs.toolsStart;
+    const total = building + equipment + tools;
+    if (total === 0 || depreciation === 0) return { building: 0, equipment: 0, tools: 0 };
+    return {
+      building: Math.round(depreciation * building / total),
+      equipment: Math.round(depreciation * equipment / total),
+      tools: Math.round(depreciation * tools / total),
+    };
+  }, [bs.buildingStart, bs.buildingEquipmentStart, bs.toolsStart, depreciation]);
+
+  const buildingEnd = bs.buildingStart - depreciableAssets.building;
+  const buildingEquipmentEnd = bs.buildingEquipmentStart - depreciableAssets.equipment;
+  const toolsEnd = bs.toolsStart - depreciableAssets.tools;
+
+  // 売掛金期末 = 12月の売上（翌年1月入金）
+  const accountsReceivableEnd = data.monthlyRevenue[11] || 0;
 
   const updateBs = (field: keyof BalanceSheetState, value: string) => {
     setBs(prev => ({ ...prev, [field]: Number(value) || 0 }));
@@ -438,11 +463,11 @@ export const BlueReturnView: React.FC<BlueReturnViewProps> = ({ transactions }) 
                 )}
                 <CopyCell value={depositEnd} className="border border-gray-300" />
               </tr>
-              <BsRow label="売掛金" startField="accountsReceivableStart" endField="accountsReceivableEnd" />
+              <BsRow label="売掛金" startField="accountsReceivableStart" endValue={accountsReceivableEnd} endEditable={false} />
               <BsRow label="棚卸資産" startField="inventoryStart" endField="inventoryEnd" />
-              <BsRow label="建物" startField="buildingStart" endField="buildingEnd" />
-              <BsRow label="建物附属設備" startField="buildingEquipmentStart" endField="buildingEquipmentEnd" />
-              <BsRow label="工具器具備品" startField="toolsStart" endField="toolsEnd" />
+              <BsRow label="建物" startField="buildingStart" endValue={buildingEnd} endEditable={false} />
+              <BsRow label="建物附属設備" startField="buildingEquipmentStart" endValue={buildingEquipmentEnd} endEditable={false} />
+              <BsRow label="工具器具備品" startField="toolsStart" endValue={toolsEnd} endEditable={false} />
             </tbody>
           </table>
         </div>
