@@ -71,11 +71,11 @@ describe('StatusView', () => {
 
       const { container } = render(<StatusView transactions={transactions} />);
 
-      // Pie chart center labels show totals in thousands
-      // Total income: 1000000 + 500000 = 1500000 → ¥1500k
-      // Total expenses: 800000 + 300000 = 1100000 → ¥1100k
-      expect(container.textContent).toContain('¥1500k');
-      expect(container.textContent).toContain('¥1100k');
+      // Pie chart center labels show totals (formatted via formatAmount)
+      // Total income: 1000000 + 500000 = 1500000 → ¥1.5M
+      // Total expenses: 800000 + 300000 = 1100000 → ¥1.1M
+      expect(container.textContent).toContain('¥1.5M');
+      expect(container.textContent).toContain('¥1.1M');
     });
   });
 
@@ -96,7 +96,7 @@ describe('StatusView', () => {
       // Expense categories: Food (500k), Transport (200k)
       
       // Total income shown in center of pie chart
-      expect(container.textContent).toContain('¥1000k'); // Total income
+      expect(container.textContent).toContain('¥1M'); // Total income
       expect(container.textContent).toContain('¥700k'); // Total expenses
     });
   });

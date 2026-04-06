@@ -91,9 +91,9 @@ describe('Monthly Totals Consistency Integration Tests', () => {
       const statusViewContent = statusView.container.textContent || '';
       const transactionTableContent = transactionTable.container.textContent || '';
 
-      // StatusView shows in thousands
-      expect(statusViewContent).toContain('3500'); // 3500k income
-      expect(statusViewContent).toContain('3000'); // 3000k expenses
+      // StatusView shows formatted amounts (formatAmount: >=1M → M suffix)
+      expect(statusViewContent).toContain('3.5M'); // 3.5M income
+      expect(statusViewContent).toContain('3M'); // 3M expenses
 
       // TransactionTable shows formatted
       expect(transactionTableContent).toContain('Income: ¥3,500,000');
@@ -140,10 +140,10 @@ describe('Monthly Totals Consistency Integration Tests', () => {
       const totalIncome = 4500000; // 1M + 2M + 1.5M
       const totalExpenses = 2250000; // 500k + 1M + 750k
 
-      // StatusView pie chart center shows totals in thousands
+      // StatusView pie chart center shows totals (formatAmount: >=1M → M suffix)
       const statusContent = statusView.container.textContent || '';
-      expect(statusContent).toContain(`¥${Math.round(totalIncome / 1000)}k`);
-      expect(statusContent).toContain(`¥${Math.round(totalExpenses / 1000)}k`);
+      expect(statusContent).toContain('¥4.5M');
+      expect(statusContent).toContain('¥2.3M');
 
       // TransactionTable summary cards show totals
       const tableContent = transactionTable.container.textContent || '';

@@ -51,7 +51,7 @@ export const StatusView: React.FC<StatusViewProps> = ({ transactions }) => {
   const positiveExpenseTotal = topExpenseCategories.reduce((s, [, a]) => s + a, 0);
 
   // Monthly data — derive range from actual transaction dates
-  const transactionDates = filteredTransactions.map(t => new Date(t.date));
+  const transactionDates = filteredTransactions.map(t => new Date(t.date)).filter(d => !isNaN(d.getTime()));
   const earliestDate = transactionDates.length > 0 ? new Date(Math.min(...transactionDates.map(d => d.getTime()))) : new Date();
   const latestDate = transactionDates.length > 0 ? new Date(Math.max(...transactionDates.map(d => d.getTime()))) : new Date();
   const months = eachMonthOfInterval({ start: startOfMonth(earliestDate), end: endOfMonth(latestDate) });
