@@ -46,11 +46,11 @@ export const MonthlyBarChart: React.FC<BarChartProps> = ({ data }) => {
         <p className="text-gray-600">Side-by-side comparison of monthly income and expenses over the last 12 months</p>
         <div className="mt-2 flex items-center gap-4 text-xs">
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-gradient-to-t from-green-400 to-blue-400 rounded mr-1"></div>
+            <div className="w-3 h-3 rounded mr-1" style={{ border: '2px solid #06b6d4' }}></div>
             <span className="text-gray-600">Income (stacked by category)</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-gradient-to-t from-gray-400 to-purple-400 rounded mr-1"></div>
+            <div className="w-3 h-3 rounded mr-1" style={{ border: '2px solid #9CA3AF' }}></div>
             <span className="text-gray-600">Expenses (stacked by category)</span>
           </div>
         </div>

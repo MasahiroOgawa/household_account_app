@@ -1,24 +1,24 @@
 import { CategoryDisplayInfo } from '../../types/Category';
 
 export const categoryDisplayInfo: Record<string, CategoryDisplayInfo> = {
-  // Income categories - Blue spectrum
-  'salary': { name: 'Salary', color: '#3b82f6', type: 'income' },
-  'company_refund': { name: 'Company Refund', color: '#60a5fa', type: 'income' },
-  'country_refund': { name: 'Country/Tax Refund', color: '#2563eb', type: 'income' },
-  'deposit': { name: 'Deposit', color: '#93c5fd', type: 'income' },
-  'revenue': { name: 'Revenue', color: '#0ea5e9', type: 'income' },
-  'other_income': { name: 'Other Income', color: '#1d4ed8', type: 'income' },
+  // Income categories - Distinct colors
+  'salary': { name: 'Salary', color: '#2563eb', type: 'income' },
+  'company_refund': { name: 'Company Refund', color: '#d97706', type: 'income' },
+  'country_refund': { name: 'Country/Tax Refund', color: '#7c3aed', type: 'income' },
+  'deposit': { name: 'Deposit', color: '#0891b2', type: 'income' },
+  'revenue': { name: 'Revenue', color: '#059669', type: 'income' },
+  'other_income': { name: 'Other Income', color: '#6366f1', type: 'income' },
 
   // Japanese income
-  '給与': { name: '給与', color: '#3b82f6', type: 'income' },
-  '賞与': { name: '賞与', color: '#60a5fa', type: 'income' },
-  '投資収益': { name: '投資収益', color: '#2563eb', type: 'income' },
-  '利息': { name: '利息', color: '#93c5fd', type: 'income' },
-  '配当': { name: '配当', color: '#1d4ed8', type: 'income' },
-  '還付金': { name: '還付金', color: '#60a5fa', type: 'income' },
-  '返金': { name: '返金', color: '#2563eb', type: 'income' },
-  '現金引出': { name: '現金引出', color: '#93c5fd', type: 'income' },
-  'その他収入': { name: 'その他収入', color: '#1d4ed8', type: 'income' },
+  '給与': { name: '給与', color: '#2563eb', type: 'income' },
+  '賞与': { name: '賞与', color: '#16a34a', type: 'income' },
+  '投資収益': { name: '投資収益', color: '#0d9488', type: 'income' },
+  '利息': { name: '利息', color: '#ea580c', type: 'income' },
+  '配当': { name: '配当', color: '#be185d', type: 'income' },
+  '還付金': { name: '還付金', color: '#d97706', type: 'income' },
+  '返金': { name: '返金', color: '#7c3aed', type: 'income' },
+  '現金引出': { name: '現金引出', color: '#0891b2', type: 'income' },
+  'その他収入': { name: 'その他収入', color: '#6366f1', type: 'income' },
 
   // Expense categories - Red spectrum
   'invest': { name: 'Investment', color: '#ef4444', type: 'expense' },
@@ -85,30 +85,31 @@ export const categoryDisplayInfo: Record<string, CategoryDisplayInfo> = {
 };
 
 const incomeColorMap: Record<string, string> = {
-  'salary': '#3b82f6',
-  'revenue': '#0ea5e9',
-  'company_refund': '#60a5fa',
-  'country_refund': '#2563eb',
-  'deposit': '#93c5fd',
-  'other_income': '#1d4ed8',
-  'bonus': '#0ea5e9',
-  'investment': '#06b6d4',
-  'interest': '#14b8a6',
-  'dividend': '#0d9488',
-  '給与': '#3b82f6',
-  '賞与': '#0ea5e9',
-  '投資収益': '#06b6d4',
-  '利息': '#14b8a6',
-  '配当': '#0d9488',
-  '還付金': '#60a5fa',
-  '返金': '#2563eb',
-  '現金引出': '#93c5fd',
-  'その他収入': '#1d4ed8',
+  'salary': '#2563eb',
+  'revenue': '#059669',
+  'company_refund': '#d97706',
+  'country_refund': '#7c3aed',
+  'tax_refund': '#7c3aed',
+  'deposit': '#0891b2',
+  'other_income': '#6366f1',
+  'bonus': '#16a34a',
+  'investment': '#0d9488',
+  'interest': '#ea580c',
+  'dividend': '#be185d',
+  '給与': '#2563eb',
+  '賞与': '#16a34a',
+  '投資収益': '#0d9488',
+  '利息': '#ea580c',
+  '配当': '#be185d',
+  '還付金': '#d97706',
+  '返金': '#7c3aed',
+  '現金引出': '#0891b2',
+  'その他収入': '#6366f1',
 };
 
-const blueShades = [
-  '#3b82f6', '#60a5fa', '#2563eb', '#93c5fd', '#1d4ed8',
-  '#0ea5e9', '#06b6d4', '#14b8a6',
+const incomeFallbackColors = [
+  '#2563eb', '#059669', '#d97706', '#7c3aed', '#0891b2',
+  '#ea580c', '#be185d', '#0d9488', '#16a34a', '#6366f1',
 ];
 
 export const getCategoryColor = (category: string): string => {
@@ -134,7 +135,7 @@ export const getIncomeCategoryColor = (category: string, index: number = 0): str
   if (incomeColorMap[normalized]) {
     return incomeColorMap[normalized];
   }
-  return blueShades[index % blueShades.length];
+  return incomeFallbackColors[index % incomeFallbackColors.length];
 };
 
 export const DEFAULT_COLOR = '#94a3b8';

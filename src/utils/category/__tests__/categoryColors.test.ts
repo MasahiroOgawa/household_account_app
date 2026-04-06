@@ -7,11 +7,11 @@ describe('getCategoryColor', () => {
   });
 
   it('returns color for known income category', () => {
-    expect(getCategoryColor('salary')).toBe('#3b82f6');
+    expect(getCategoryColor('salary')).toBe('#2563eb');
   });
 
   it('is case insensitive', () => {
-    expect(getCategoryColor('Salary')).toBe('#3b82f6');
+    expect(getCategoryColor('Salary')).toBe('#2563eb');
     expect(getCategoryColor('GROCERY')).toBe('#dc2626');
   });
 
@@ -32,19 +32,28 @@ describe('getCategoryColor', () => {
 
 describe('getIncomeCategoryColor', () => {
   it('returns specific color for salary', () => {
-    expect(getIncomeCategoryColor('salary')).toBe('#3b82f6');
+    expect(getIncomeCategoryColor('salary')).toBe('#2563eb');
   });
 
   it('returns specific color for Japanese salary', () => {
-    expect(getIncomeCategoryColor('給与')).toBe('#3b82f6');
+    expect(getIncomeCategoryColor('給与')).toBe('#2563eb');
   });
 
-  it('returns a blue shade for unknown income category', () => {
+  it('returns distinct colors for different income categories', () => {
+    const salary = getIncomeCategoryColor('salary');
+    const revenue = getIncomeCategoryColor('revenue');
+    const deposit = getIncomeCategoryColor('deposit');
+    expect(salary).not.toBe(revenue);
+    expect(salary).not.toBe(deposit);
+    expect(revenue).not.toBe(deposit);
+  });
+
+  it('returns a fallback color for unknown income category', () => {
     const color = getIncomeCategoryColor('unknown_income', 0);
-    expect(color).toBe('#3b82f6'); // first blue shade
+    expect(color).toBe('#2563eb');
   });
 
-  it('cycles through blue shades for different indices', () => {
+  it('cycles through distinct colors for different indices', () => {
     const color0 = getIncomeCategoryColor('foo', 0);
     const color1 = getIncomeCategoryColor('foo', 1);
     expect(color0).not.toBe(color1);
