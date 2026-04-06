@@ -1,93 +1,98 @@
 import { describe, it, expect } from 'vitest';
-import * as fs from 'fs';
-import * as Papa from 'papaparse';
 import { detectFileType } from '../../utils/parsing/fileTypeDetector';
 import { buildTransaction } from '../../utils/parsing/transactionBuilder';
 import { configLoader } from '../../utils/config/configLoader';
-import { detectEncoding, convertToUnicode } from '../../utils/parsing/encodingDetector';
 
 describe('PayPay Bank Parsing', () => {
-  const filePath = 'data/2026/transaction/NBG230614pJs7q86be7hjq3b97q1321JbC2pPs.csv';
-  const fileName = 'NBG230614pJs7q86be7hjq3b97q1321JbC2pPs.csv';
+  // Headers: 操作日(年), 操作日(月), 操作日(日), 操作時刻(時), 操作時刻(分), 操作時刻(秒), 取引順番号, 摘要, お支払金額, お預り金額, 残高, メモ
+  const paypayBankHeaders = [
+    '操作日(年)', '操作日(月)', '操作日(日)',
+    '操作時刻(時)', '操作時刻(分)', '操作時刻(秒)',
+    '取引順番号', '摘要', 'お支払金額', 'お預り金額', '残高', 'メモ',
+  ];
 
-  const readAndDecode = (path: string) => {
-    const buf = fs.readFileSync(path);
-    const uint8 = new Uint8Array(buf);
-    const encoding = detectEncoding(uint8);
-    return convertToUnicode(uint8, encoding);
-  };
+  const makeRow = (
+    year: string, month: string, day: string,
+    hour: string, minute: string, second: string,
+    seqNum: string, description: string,
+    withdrawal: string, deposit: string, balance: string, memo = '',
+  ) => [year, month, day, hour, minute, second, seqNum, description, withdrawal, deposit, balance, memo];
 
-  const parseFile = (path: string, name: string) => {
-    const decoded = readAndDecode(path);
-    const results = Papa.parse(decoded);
-    const data = results.data as any[][];
-    const headers = data[0] || [];
-    const detectedType = detectFileType(headers, name);
-    if (!detectedType) return { detectedType: null, transactions: [] };
-
-    const sourceConfig = configLoader.getColumnMapping().sources[detectedType];
-    const skipRows = sourceConfig.skipRows || 0;
-    const transactions = [];
-
-    for (let i = skipRows; i < data.length; i++) {
-      const row = data[i];
-      if (!row || row.length === 0) continue;
-      const tx = buildTransaction(row, detectedType, sourceConfig, name);
-      if (tx) transactions.push(tx);
-    }
-
-    return { detectedType, transactions };
-  };
+  const sourceConfig = () => configLoader.getColumnMapping().sources['paypay_bank'];
 
   it('detects PayPay Bank file type from filename', () => {
-    expect(detectFileType([], fileName)).toBe('paypay_bank');
+    expect(detectFileType([], 'NBG230614pJs7q86be7hjq3b97q1321JbC2pPs.csv')).toBe('paypay_bank');
   });
 
   it('detects PayPay Bank file type from headers', () => {
-    const decoded = readAndDecode(filePath);
-    const results = Papa.parse(decoded);
-    const headers = results.data[0] as string[];
-    expect(detectFileType(headers, 'unknown.csv')).toBe('paypay_bank');
+    expect(detectFileType(paypayBankHeaders, 'unknown.csv')).toBe('paypay_bank');
   });
 
-  it('parses transactions from sample file', () => {
-    const { detectedType, transactions } = parseFile(filePath, fileName);
+  it('builds deposit (income) transaction', () => {
+    const row = makeRow('2026', '2', '20', '8', '43', '15', '0000101',
+      '振込 オガワ　マサヒロ', '', '30000', '30000');
+    const tx = buildTransaction(row, 'paypay_bank', sourceConfig(), 'NBG_test.csv');
 
-    expect(detectedType).toBe('paypay_bank');
-    expect(transactions.length).toBeGreaterThan(0);
+    expect(tx).not.toBeNull();
+    expect(tx!.date).toBe('2026-02-20');
+    expect(tx!.time).toBe('08:43:15');
+    expect(tx!.type).toBe('income');
+    expect(tx!.amount).toBe(30000);
+    expect(tx!.source).toBe('PayPay銀行');
   });
 
-  it('correctly parses composite date columns', () => {
-    const { transactions } = parseFile(filePath, fileName);
+  it('builds withdrawal (expense) transaction', () => {
+    const row = makeRow('2026', '2', '28', '0', '32', '9', '0000101',
+      'Visaデビット翌月払い 02月お支払分', '23497', '', '6503');
+    const tx = buildTransaction(row, 'paypay_bank', sourceConfig(), 'NBG_test.csv');
 
-    expect(transactions[0].date).toBe('2026-02-20');
+    expect(tx).not.toBeNull();
+    expect(tx!.date).toBe('2026-02-28');
+    expect(tx!.time).toBe('00:32:09');
+    expect(tx!.type).toBe('expense');
+    expect(tx!.amount).toBe(23497);
   });
 
-  it('correctly parses composite time columns', () => {
-    const { transactions } = parseFile(filePath, fileName);
+  it('builds interest income transaction', () => {
+    const row = makeRow('2026', '3', '1', '0', '16', '57', '0000101',
+      '決算お利息 2月分', '', '1', '6504');
+    const tx = buildTransaction(row, 'paypay_bank', sourceConfig(), 'NBG_test.csv');
 
-    expect(transactions[0].time).toBe('08:43:15');
+    expect(tx).not.toBeNull();
+    expect(tx!.type).toBe('income');
+    expect(tx!.amount).toBe(1);
   });
 
-  it('correctly identifies income and expense transactions', () => {
-    const { transactions } = parseFile(filePath, fileName);
+  it('builds cashback income transaction', () => {
+    const row = makeRow('2026', '3', '1', '2', '1', '4', '0000201',
+      'Visaデビットキャッシュバック 翌月払い 03月分', '', '113', '6617');
+    const tx = buildTransaction(row, 'paypay_bank', sourceConfig(), 'NBG_test.csv');
 
-    // First row: deposit of 30000 (振込 オガワ　マサヒロ)
-    const deposit = transactions.find(t => t.description.includes('オガワ'));
-    expect(deposit).toBeDefined();
-    expect(deposit!.type).toBe('income');
-    expect(deposit!.amount).toBe(30000);
-
-    // Visaデビット翌月払い is an expense
-    const visa = transactions.find(t => t.description.includes('Visaデビット翌月払い'));
-    expect(visa).toBeDefined();
-    expect(visa!.type).toBe('expense');
-    expect(visa!.amount).toBe(23497);
+    expect(tx).not.toBeNull();
+    expect(tx!.type).toBe('income');
+    expect(tx!.amount).toBe(113);
   });
 
   it('sets source to PayPay銀行', () => {
-    const { transactions } = parseFile(filePath, fileName);
+    const row = makeRow('2026', '4', '1', '2', '1', '2', '0000101',
+      'Visaデビットキャッシュバック 翌月払い 04月分', '', '368', '13623');
+    const tx = buildTransaction(row, 'paypay_bank', sourceConfig(), 'NBG_test.csv');
 
-    expect(transactions.every(t => t.source === 'PayPay銀行')).toBe(true);
+    expect(tx).not.toBeNull();
+    expect(tx!.source).toBe('PayPay銀行');
+  });
+
+  it('returns null for empty year/month/day', () => {
+    const row = makeRow('', '', '', '0', '0', '0', '', 'テスト', '', '100', '100');
+    const tx = buildTransaction(row, 'paypay_bank', sourceConfig(), 'NBG_test.csv');
+
+    expect(tx).toBeNull();
+  });
+
+  it('returns null when both withdrawal and deposit are empty', () => {
+    const row = makeRow('2026', '1', '1', '0', '0', '0', '0000101', 'テスト', '', '', '0');
+    const tx = buildTransaction(row, 'paypay_bank', sourceConfig(), 'NBG_test.csv');
+
+    expect(tx).toBeNull();
   });
 });
