@@ -5,6 +5,8 @@ export interface SourceConfig {
   encoding: string;
   skipRows: number;
   dateFormat?: string;
+  dateColumns?: number[];
+  timeColumns?: number[];
   amountColumns?: {
     withdrawal: number;
     deposit: number;

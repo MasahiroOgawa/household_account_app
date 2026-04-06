@@ -68,9 +68,15 @@ export const buildTransaction = (
 
   const columns = sourceConfig.columns;
 
-  // Extract date
+  // Extract date (composite columns [year, month, day] or single column)
   let dateStr = '';
-  if (typeof columns.date === 'number' && columns.date >= 0 && columns.date < row.length) {
+  if (sourceConfig.dateColumns && sourceConfig.dateColumns.length >= 3) {
+    const [yCol, mCol, dCol] = sourceConfig.dateColumns;
+    const y = (row[yCol] || '').toString().trim();
+    const m = (row[mCol] || '').toString().trim();
+    const d = (row[dCol] || '').toString().trim();
+    if (y && m && d) dateStr = `${y}/${m}/${d}`;
+  } else if (typeof columns.date === 'number' && columns.date >= 0 && columns.date < row.length) {
     dateStr = row[columns.date] || '';
   }
   if (!dateStr || dateStr.trim() === '') return null;
@@ -174,11 +180,20 @@ export const buildTransaction = (
     : detectCategory(shopName || description, transactionType);
   const sourceName = sourceConfig.name || sourceType;
 
-  // Extract time from dedicated column if available, otherwise default
-  const timeColIdx = typeof columns.time === 'number' ? columns.time as number : -1;
-  const timeValue = (timeColIdx >= 0 && timeColIdx < row.length && row[timeColIdx])
-    ? row[timeColIdx].toString().trim()
-    : '12:00:00';
+  // Extract time (composite columns [hour, minute, second] or single column)
+  let timeValue = '12:00:00';
+  if (sourceConfig.timeColumns && sourceConfig.timeColumns.length >= 3) {
+    const [hCol, minCol, sCol] = sourceConfig.timeColumns;
+    const h = (row[hCol] || '0').toString().trim().padStart(2, '0');
+    const min = (row[minCol] || '0').toString().trim().padStart(2, '0');
+    const s = (row[sCol] || '0').toString().trim().padStart(2, '0');
+    timeValue = `${h}:${min}:${s}`;
+  } else {
+    const timeColIdx = typeof columns.time === 'number' ? columns.time as number : -1;
+    timeValue = (timeColIdx >= 0 && timeColIdx < row.length && row[timeColIdx])
+      ? row[timeColIdx].toString().trim()
+      : '12:00:00';
+  }
 
   return {
     id: generateUniqueId(sourceType),

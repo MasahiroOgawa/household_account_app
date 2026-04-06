@@ -107,6 +107,22 @@
       "dateFormat": "YYYYMMDD"
     },
 
+    "paypay_bank": {
+      "name": "PayPay銀行",
+      "filename": ["NBG*.csv"],
+      "columns": {
+        "description": 7,
+        "withdrawal": 8,
+        "deposit": 9,
+        "balance": 10
+      },
+      "dateColumns": [0, 1, 2],
+      "timeColumns": [3, 4, 5],
+      "encoding": "shift-jis",
+      "skipRows": 1,
+      "dateFormat": "YYYY/M/D"
+    },
+
     "transaction_result": {
       "name": "Transaction Result",
       "columns": {
@@ -176,6 +192,10 @@
     "paypal": {
       "headerPatterns": ["残高への影響", "取引ID", "送信者メールアドレス"],
       "fileNamePattern": "download\\.csv"
+    },
+    "paypay_bank": {
+      "headerPatterns": ["操作日(年)", "操作日(月)", "操作時刻(時)", "摘要", "お支払金額", "お預り金額"],
+      "fileNamePattern": "NBG"
     },
     "transaction_result": {
       "headerPatterns": ["Date", "Time", "Amount", "Type", "Description", "Category", "Shop Name", "Source"],
