@@ -135,6 +135,13 @@ export const getIncomeCategoryColor = (category: string, index: number = 0): str
   if (incomeColorMap[normalized]) {
     return incomeColorMap[normalized];
   }
+  // Use the category's own color if it exists (e.g. expense categories like 'withdraw')
+  const info = categoryDisplayInfo[normalized];
+  if (info) return info.color;
+  if (normalized.startsWith('private-')) {
+    const parent = categoryDisplayInfo[normalized.slice(8)];
+    if (parent) return parent.color;
+  }
   return incomeFallbackColors[index % incomeFallbackColors.length];
 };
 
