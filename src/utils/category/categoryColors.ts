@@ -21,7 +21,6 @@ export const categoryDisplayInfo: Record<string, CategoryDisplayInfo> = {
   'その他収入': { name: 'その他収入', color: '#6366f1', type: 'income' },
 
   // Expense categories - Red spectrum
-  'invest': { name: 'Investment', color: '#ef4444', type: 'expense' },
   'education': { name: 'Education', color: '#f87171', type: 'expense' },
   'grocery': { name: 'Grocery', color: '#dc2626', type: 'expense' },
   'wear': { name: 'Wear', color: '#fca5a5', type: 'expense' },
@@ -77,7 +76,6 @@ export const categoryDisplayInfo: Record<string, CategoryDisplayInfo> = {
   'communication': { name: 'Communication', color: '#14b8a6', type: 'expense' },
   'personal_care': { name: 'Personal Care', color: '#f97316', type: 'expense' },
   'pets': { name: 'Pets', color: '#fb923c', type: 'expense' },
-  'investment': { name: 'Investment', color: '#f97316', type: 'expense' },
   'taxes': { name: 'Taxes', color: '#b91c1c', type: 'expense' },
   'pension': { name: 'Pension', color: '#991b1b', type: 'expense' },
   'other': { name: 'Other', color: '#64748b', type: 'expense' },
@@ -93,7 +91,6 @@ const incomeColorMap: Record<string, string> = {
   'deposit': '#0891b2',
   'other_income': '#6366f1',
   'bonus': '#16a34a',
-  'investment': '#0d9488',
   'interest': '#ea580c',
   'dividend': '#be185d',
   '給与': '#2563eb',
@@ -121,10 +118,6 @@ export const getCategoryColor = (category: string): string => {
   if (normalized.startsWith('private-')) {
     const parent = categoryDisplayInfo[normalized.slice(8)];
     if (parent) return parent.color;
-  }
-
-  if (normalized === 'invest' || normalized === 'investment') {
-    return '#ef4444';
   }
 
   return '#94a3b8';

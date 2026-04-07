@@ -10,7 +10,6 @@
       "other_income"
     ],
     "expense": [
-      "invest",
       "education",
       "grocery",
       "housing",
@@ -41,7 +40,7 @@
       "private-other_income": "other_income"
     },
     "expense": {
-      "売上原価": "invest",
+      "売上原価": "other_expense",
       "租税公課": "tax",
       "修繕費": "housing",
       "荷造運賃": "transit",
@@ -65,7 +64,7 @@
       "修繕積立金": "housing",
       "未償却の繰延資産": "other_expense",
       "専従者給与": "other_expense",
-      "private-invest": "invest",
+      "private-invest": "internal_transfer",
       "private-education": "education",
       "private-grocery": "grocery",
       "private-housing": "housing",

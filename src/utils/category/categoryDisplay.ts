@@ -122,6 +122,6 @@ export const getCategoryType = (category: string): 'income' | 'expense' | 'trans
 export const getAllCategories = (): { income: string[]; expense: string[] } => {
   return {
     income: ['salary', 'revenue', 'company_refund', 'country_refund', 'deposit', 'other_income'],
-    expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'withdraw', 'other_expense'],
+    expense: ['education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'withdraw', 'other_expense'],
   };
 };

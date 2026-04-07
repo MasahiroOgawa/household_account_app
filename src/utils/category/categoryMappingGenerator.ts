@@ -10,7 +10,7 @@ export interface CategoryMappingStructure {
 
 const defaultCategories = {
   income: ['salary', 'company_refund', 'country_refund', 'deposit', 'other_income'],
-  expense: ['invest', 'education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'other_expense'],
+  expense: ['education', 'grocery', 'wear', 'housing', 'utility', 'medical', 'leisure', 'gift', 'other_expense'],
 };
 
 const commonPatterns: Record<string, string> = {
@@ -37,7 +37,7 @@ const commonPatterns: Record<string, string> = {
   '映画': 'leisure', 'カラオケ': 'leisure', '旅行': 'leisure',
   'ホテル': 'leisure', 'レストラン': 'leisure', 'カフェ': 'leisure',
   'スターバックス': 'leisure', 'マクドナルド': 'leisure', '外食': 'leisure',
-  '証券': 'invest', '株式': 'invest', 'SBI': 'invest', '投資': 'invest',
+  '証券': 'private-invest', '株式': 'private-invest', 'SBI': 'private-invest', '投資': 'private-invest',
   'ギフト': 'gift', 'プレゼント': 'gift', 'お祝い': 'gift',
   'Amazon': 'other_expense', 'AMAZON': 'other_expense',
 };

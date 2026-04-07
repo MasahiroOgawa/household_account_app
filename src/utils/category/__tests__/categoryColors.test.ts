@@ -23,10 +23,9 @@ describe('getCategoryColor', () => {
     expect(getCategoryColor('unknown_category')).toBe(DEFAULT_COLOR);
   });
 
-  it('handles invest/investment aliases', () => {
-    expect(getCategoryColor('invest')).toBe('#ef4444');
-    // 'investment' is in legacy map with different color
-    expect(getCategoryColor('investment')).toBe('#f97316');
+  it('returns default for removed invest category', () => {
+    expect(getCategoryColor('invest')).toBe(DEFAULT_COLOR);
+    expect(getCategoryColor('investment')).toBe(DEFAULT_COLOR);
   });
 });
 
