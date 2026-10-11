@@ -77,6 +77,10 @@ Open the URL shown in the console (usually http://localhost:5173/) in your brows
 5. **Re-upload** — Upload the same CSVs again to see transactions with corrected categories
 6. **View stats** — Check pie charts and monthly bar charts in the Stats tab
 
+## Fetching statements automatically
+
+`fetcher/` downloads the CSVs from each bank and card site into `data/<year>/transaction/`. See [fetcher/README.md](fetcher/README.md).
+
 ## Project Structure
 
 ```

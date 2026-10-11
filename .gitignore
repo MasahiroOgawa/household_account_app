@@ -40,3 +40,8 @@ test-scripts/
 *.tmp
 *.bak
 *~
+
+# Python (fetcher/)
+.venv/
+__pycache__/
+.pytest_cache/

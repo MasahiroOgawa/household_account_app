@@ -1,0 +1,25 @@
+# Copy to data/fetch.toml (data/ is git-ignored) and edit. Run: uv run bank-fetcher ../data/fetch.toml
+[fetch]
+# Relative paths resolve against this file's directory.
+data_root = "."
+profile_root = "~/.local/share/bank-fetcher/profiles"
+# Time allowed to finish one-time passwords / SMS / captchas in the browser.
+auth_timeout_sec = 300
+# Time allowed for a hand-driven download when no recipe exists yet or it failed.
+manual_timeout_sec = 900
+
+# One [[target]] per login. `name` keys the keyring entry, browser profile, recipe and manifest records.
+# `since`: first day to fetch while the manifest has no record of this target
+# (for monthly institutions, the first billing month).
+# institution: mufg | smbc | paypay_card | paypay_bank | jre | kyoto
+
+[[target]]
+name = "mufg"
+institution = "mufg"
+accounts = ["1234567"]
+since = "2026-01-01"
+
+[[target]]
+name = "paypay_card"
+institution = "paypay_card"
+since = "2026-01-01"
